@@ -1,19 +1,9 @@
-import { LucideIcon } from "lucide-react";
-import { IconType } from "react-icons";
-
-export type link = {
-    name: string;
-    link: string;
-    icon?: LucideIcon | IconType;
-    isActive: boolean;
-}
-
 export enum FlowType {
     INITIAL = 'INITIAL', // for initally submit form
     SIGN_UP = 'SIGN_UP', // to verify email or phone number via otp
     PROGRESSIVE_SIGN_UP = 'PROGRESSIVE_SIGN_UP', // optionally field for number or email
     FINAL_SIGN_UP = 'FINAL_SIGN_UP',
-    LOGIN = 'LOGIN'
+    LOGIN = 'LOGIN',
 }
 
 export enum ScreenType {
@@ -49,3 +39,58 @@ export enum FieldType {
     LAST_NAME = 'lastName',
     AGREE_TERMS_AND_CONDITIONS = 'termsAndconditions'
 }
+
+export interface sessionData {
+    email?: string | null;
+    phonenumber?: string | null;
+    phoneCountryCode?: string | null;
+    emailVerified?: boolean;
+    phoneVerified?: boolean;
+    flowState: FlowType;
+    firstname?: string | null;
+    lastname?: string | null;
+    otp: {
+        value: string | null;
+        expiresAt: number | null;
+    };
+    type: 'Driver' | 'Rider' | null
+}
+
+export interface Session {
+    sessionId: string;
+    sessiondata: sessionData
+}
+
+
+interface Fields {
+    fieldType: string;
+    hintValue?: string;
+    otpWidth?: number;
+};
+
+interface Screens {
+    screenType: ScreenType;
+    fields: Fields[];
+    eventType: EventType; 
+};
+
+interface Form {
+    flowType: FlowType;
+    screens: Screens
+};
+
+export interface ResponseDataReturnProps {
+    form: Form;
+    inAuthSessionID: string
+};
+
+export interface HandleResponseDataProps {
+    flowType: FlowType;
+    screenType: ScreenType;
+    fields: Fields[];
+    eventType: EventType;
+    sessionId: string;
+};
+
+
+
