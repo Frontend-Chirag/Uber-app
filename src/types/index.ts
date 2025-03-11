@@ -92,5 +92,21 @@ export interface HandleResponseDataProps {
     sessionId: string;
 };
 
+export interface User {
+    id: string;
+    firstname: string;
+    lastname: string;
+    email: string | null;
+    phoneCountryCode: string | null;
+    phonenumber: string | null;
+    type: 'Driver' | 'Rider';
+    createdAt: Date;
+    updatedAt: Date;
+} 
 
-
+export interface Links {
+    name: string;
+    link: string;
+    icon?: React.ElementType;
+    isActive: boolean;
+}

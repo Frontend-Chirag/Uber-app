@@ -2,85 +2,94 @@
 
 import { findEnumKey } from '@/lib/utils';
 import { EventType, FieldType, FlowType, ScreenType } from '@/types';
-import React, { SetStateAction, createContext, useContext, useState } from 'react'
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 
-
-interface AuthFlowContextProps {
+interface AuthFlowState {
     screenType: ScreenType;
-    setScreenType: React.Dispatch<SetStateAction<ScreenType>>;
     fieldType: FieldType[];
-    setFieldType: React.Dispatch<SetStateAction<FieldType[]>>;
     eventType: EventType;
-    setEventType: React.Dispatch<SetStateAction<EventType>>
     flowType: FlowType;
-    setFlowType: React.Dispatch<SetStateAction<FlowType>>;
     inAuthSessionID: string;
-    setInAuthSessionID: React.Dispatch<SetStateAction<string>>;
     hintValue: string;
-    setHintValue: React.Dispatch<SetStateAction<string>>;
     isLoadingNextScreen: boolean;
-    setIsLoadingNextScreen: React.Dispatch<SetStateAction<boolean>>;
-    createFormData: (data: Record<FieldType, string>) => void;
+}
+
+interface AuthFlowContextProps extends AuthFlowState {
+    setScreenType: (type: ScreenType) => void;
+    setFieldType: (types: FieldType[]) => void;
+    setEventType: (type: EventType) => void;
+    setFlowType: (type: FlowType) => void;
+    setInAuthSessionID: (id: string) => void;
+    setHintValue: (value: string) => void;
+    setIsLoadingNextScreen: (isLoading: boolean) => void;
+    createFormData: (data: Record<FieldType, string>) => {
+        flowType: FlowType;
+        screenAnswers: {
+            screenType: ScreenType;
+            eventType: EventType;
+            fieldAnswers: Array<{ fieldType: string; [key: string]: string }>;
+        };
+        inAuthSessionID: string;
+    };
 }
 
 const AuthFlowContext = createContext<AuthFlowContextProps | null>(null);
 
-
-export const AuthFlowProvider = ({ children }: { children: React.ReactNode }) => {
-
-    const [screenType, setScreenType] = useState<ScreenType>(ScreenType.PHONE_NUMBER_INITIAL);
-    const [eventType, setEventType] = useState<EventType>(EventType.TypeInputEmail);
-    const [fieldType, setFieldType] = useState<FieldType[]>([FieldType.EMAIL_ADDRESS]);
-    const [flowType, setFlowType] = useState<FlowType>(FlowType.INITIAL);
-    const [inAuthSessionID, setInAuthSessionID] = useState('');
-    const [hintValue, setHintValue] = useState('')
-
-    const [isLoadingNextScreen, setIsLoadingNextScreen] = useState(false);
-
-
-    const createFormData = (data: Record<FieldType, string>) => {
-        return {
-            flowType,
-            screenAnswers: {
-                screenType,
-                eventType,
-                fieldAnswers: Object.entries(data).map(([key, value]) => {
-                    return { fieldType: findEnumKey(key as FieldType), [key]: value }
-                })
-            },
-            inAuthSessionID
-        }
-    }
-
-    return (
-        <AuthFlowContext.Provider
-            value={{
-                screenType,
-                setScreenType,
-                fieldType,
-                setFieldType,
-                eventType,
-                setEventType,
-                flowType,
-                setFlowType,
-                inAuthSessionID,
-                setInAuthSessionID,
-                hintValue,
-                setHintValue,
-                isLoadingNextScreen,
-                setIsLoadingNextScreen,
-                createFormData
-            }}
-        >
-            {children}
-        </AuthFlowContext.Provider>
-    )
+const initialState: AuthFlowState = {
+    screenType: ScreenType.PHONE_NUMBER_INITIAL,
+    fieldType: [FieldType.EMAIL_ADDRESS],
+    eventType: EventType.TypeInputEmail,
+    flowType: FlowType.INITIAL,
+    inAuthSessionID: '',
+    hintValue: '',
+    isLoadingNextScreen: false,
 };
 
+export const AuthFlowProvider = ({ children }: { children: ReactNode }) => {
+    const [state, setState] = useState<AuthFlowState>(initialState);
+
+    const setters = useMemo(() => ({
+        setScreenType: (screenType: ScreenType) => setState(prev => ({ ...prev, screenType })),
+        setFieldType: (fieldType: FieldType[]) => setState(prev => ({ ...prev, fieldType })),
+        setEventType: (eventType: EventType) => setState(prev => ({ ...prev, eventType })),
+        setFlowType: (flowType: FlowType) => setState(prev => ({ ...prev, flowType })),
+        setInAuthSessionID: (inAuthSessionID: string) => setState(prev => ({ ...prev, inAuthSessionID })),
+        setHintValue: (hintValue: string) => setState(prev => ({ ...prev, hintValue })),
+        setIsLoadingNextScreen: (isLoadingNextScreen: boolean) => setState(prev => ({ ...prev, isLoadingNextScreen })),
+    }), []);
+
+    const createFormData = useCallback((data: Record<FieldType, string>) => {
+        return {
+            flowType: state.flowType,
+            screenAnswers: {
+                screenType: state.screenType,
+                eventType: state.eventType,
+                fieldAnswers: Object.entries(data).map(([key, value]) => ({
+                    fieldType: findEnumKey(key as FieldType) || key,
+                    [key]: value
+                }))
+            },
+            inAuthSessionID: state.inAuthSessionID
+        };
+    }, [state.flowType, state.screenType, state.eventType, state.inAuthSessionID]);
+
+    const contextValue = useMemo(() => ({
+        ...state,
+        ...setters,
+        createFormData
+    }), [state, setters, createFormData]);
+
+    return (
+        <AuthFlowContext.Provider value={contextValue}>
+            {children}
+        </AuthFlowContext.Provider>
+    );
+};
 
 export const useAuthFlow = () => {
     const context = useContext(AuthFlowContext);
-    if (context === null) {
+    if (!context) {
         throw new Error('useAuthFlow must be used within an AuthFlowProvider');
     }
     return context;
