@@ -1,17 +1,15 @@
 import { HandleProps } from "@/types/auth";
 import { AuthResponseBuilder } from "@/lib/response-builder";
-import { validateInput, emailSchema } from "@/lib/validators";
 import { handleAuthError } from "@/lib/error-handler";
 import { db } from "@/lib/db";
 import { sendOTPEmail } from "../utils";
-import { FlowType, ScreenType, FieldType, EventType } from "@/types";
-import { createResponseData, findEnumKey } from "@/lib/utils";
+import { FlowType} from "@/types";
 import { redisService } from "@/features/auth/server/utils/redis";
 import { getEmailVerificationStep } from "../utils/navigation";
 
 export async function handleEmailVerification({ session, fieldAnswers }: HandleProps) {
     try {
-        const email = validateInput(emailSchema, fieldAnswers[0].emailAddress);
+        const email = fieldAnswers[0].emailAddress!;
         
         const existingUser = await db.user.findUnique({
             where: { email }

@@ -1,6 +1,6 @@
 "use client";
 // import { Separator } from '@/components/ui/separator';
-import { useAuthFlow } from '@/components/auth-flow-provider';
+import { useAuthFlow } from '@/components/auth-form/auth-flow-provider';
 import { FlowType, ScreenType } from '@/types';
 import termsAndConditionSvg from '@/assets/photos/termsAndConditions.png';
 import React, { useMemo } from 'react';
@@ -54,8 +54,8 @@ const SCREEN_TITLES: ScreenTitlesConfig = {
         className: "text-2xl font-Rubik-SemiBold",
         wrapper: true
     }),
-    [ScreenType.PHONE_NUMBER_INITIAL]: () => ({
-        title: "What's your phone number or email?",
+    [ScreenType.PHONE_NUMBER_INITIAL]:  () => ({
+          title: "What's your phone number or email?",
         className: "text-2xl font-Rubik-SemiBold"
     }),
     [ScreenType.EMAIL_ADDRESS]: function (hintValue: string): TitleConfig {
@@ -64,14 +64,14 @@ const SCREEN_TITLES: ScreenTitlesConfig = {
     [ScreenType.RESET_ACCOUNT]: function (hintValue: string): TitleConfig {
         throw new Error('Function not implemented.');
     }
-};
+} ;
 
 export const TitleContainer = () => {
     const { screenType, hintValue } = useAuthFlow();
 
     // Memoize the title configuration
     const titleConfig = useMemo(() => {
-        const getTitle = SCREEN_TITLES[screenType];
+        const getTitle = SCREEN_TITLES[screenType] ;
         return getTitle(hintValue);
     }, [screenType, hintValue]);
 
@@ -113,7 +113,7 @@ export const AuthFormWrapper = ({ children }: AuthWrapper) => {
     }, [isInitial]);
 
     return (
-        <div className=" flex flex-col gap-y-4 bg-red-500 px-4 sm:px-0">
+        <div className="mx-auto flex flex-col gap-y-4 w-full sm:w-[370px] px-4 sm:px-0">
             <div className='flex flex-col gap-y-8 mt-6'>
                 <TitleContainer />
             </div>

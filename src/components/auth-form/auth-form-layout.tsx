@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuthFlow } from "@/components/auth-flow-provider";
+import { useAuthFlow } from "@/components/auth-form/auth-flow-provider";
 import { AuthForm } from "./auth-form";
 import { AuthFormFields } from "./auth-form-fields";
 import { AuthFormWrapper } from "./auth-form-wrapper";

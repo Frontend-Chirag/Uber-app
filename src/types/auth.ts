@@ -1,5 +1,5 @@
 import { User } from "./user";
-import { ResponseDataReturnProps, Session } from "@/types";
+import { FieldType, ResponseDataReturnProps, Session } from "@/types";
 
 export interface FieldAnswers {
     emailAddress?: string;
@@ -21,5 +21,7 @@ export interface AuthResponse {
 
 export interface HandleProps {
     session: Session;
-    fieldAnswers: FieldAnswers[];
+    fieldAnswers: {
+        fieldType: FieldType,
+    }[];
 } 

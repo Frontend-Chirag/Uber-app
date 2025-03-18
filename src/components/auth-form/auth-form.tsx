@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuthFlow } from '@/components/auth-flow-provider';
+import { useAuthFlow } from '@/components/auth-form/auth-flow-provider';
 import { useEffect, useState, useCallback, useMemo, memo } from 'react'
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
@@ -12,6 +12,7 @@ import { FormProvider, useForm } from 'react-hook-form';
 import { formatTime, phoneCountryCodes } from '@/lib/constants';
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSubmit } from '@/features/auth/api/auth-api';
 
 
 export interface OtpSectionProps {
@@ -66,6 +67,8 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
     const isInital = flowType === FlowType.INITIAL;
     const isFirstNameLastName = screenType === ScreenType.FIRST_NAME_LAST_NAME;
 
+    const { mutateAsync, data: resData, isPending } = useSubmit;
+
     const [timeLeft, setTimeLeft] = useState(15);
     const [isCompleted, setIsCompleted] = useState(false);
 
@@ -108,17 +111,25 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
     const findEnumKey = (key: string) => Object.entries(FieldType).find(([_, value]) => value === key)?.[0];
 
     const onSubmit = useCallback(async (data: Record<FieldType, string>) => {
-        const formData = {
-            flowType,
-            screenAnswers: {
-                screenType,
-                eventType,
-                fieldAnswers: Object.entries(data).map(([key, value]) => {
-                    return { fieldType: findEnumKey(key), [key]: value }
-                })
-            },
-            inAuthSessionID
-        }
+
+        const res = mutateAsync({
+            json: {
+                flowType,
+                screenAnswers: {
+                    screenType,
+                    eventType,
+                    fieldAnswers: Object.entries(data).map(([key, value]) => {
+                        const fieldType = findEnumKey(key) as FieldType; // Ensure fieldType is of type FieldType
+                        return { fieldType, [key]: value !== undefined ? value : null }; // Remove type assertion
+                    })
+                },
+                inAuthSessionID
+            }
+        });
+
+        
+
+        
 
         // try {
         //     setIsLoadingNextScreen(true);

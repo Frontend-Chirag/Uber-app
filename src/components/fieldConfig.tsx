@@ -20,9 +20,8 @@ export const FieldValidationSchema = {
     [FieldType.AGREE_TERMS_AND_CONDITIONS]: z.boolean()
         .refine((value) => value === true, {
             message: "You must agree to the terms and conditions",
-        })
-        .default(false),
-} as const;
+        }),
+};
 
 export interface RenderFieldProps {
     field: FieldType;

@@ -58,7 +58,7 @@ export interface sessionData {
 
 export interface Session {
     sessionId: string;
-    sessiondata: sessionData
+    data: sessionData | null;
 }
 
 
@@ -83,6 +83,8 @@ export interface ResponseDataReturnProps {
     form: Form;
     inAuthSessionID: string
 };
+
+
 
 export interface HandleResponseDataProps {
     flowType: FlowType;

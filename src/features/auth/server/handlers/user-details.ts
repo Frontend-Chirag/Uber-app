@@ -9,16 +9,11 @@ import { z } from "zod";
 
 export async function handleInputDetails({ session, fieldAnswers }: HandleProps) {
     try {
-        const details = validateInput(
-            z.object({
-                firstname: z.string().min(2),
-                lastname: z.string().min(2)
-            }),
-            {
-                firstname: fieldAnswers[0].firstname,
-                lastname: fieldAnswers[1].lastname
-            }
-        );
+        const details = {
+            firstname: fieldAnswers[0].firstname,
+            lastname: fieldAnswers[1].lastname
+        }
+
 
         await redisService.updateFormSession(session.sessionId, details);
 

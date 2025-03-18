@@ -1,7 +1,7 @@
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { FIELD_CONFIG } from '@/components/fieldConfig';
 import { cn } from '@/lib/utils';
-import { useAuthFlow, } from '@/components/auth-flow-provider';
+import { useAuthFlow, } from '@/components/auth-form/auth-flow-provider';
 import { EventType, FieldType, FlowType, ScreenType } from '@/types';
 import { phoneCountryCodes } from '@/lib/constants';
 import { useFormContext } from 'react-hook-form';

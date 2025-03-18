@@ -95,7 +95,7 @@ class RedisService {
         }
     }
 
-    public async getFormSession(sessionId: string): Promise<{ sessiondata: sessionData; sessionId: string }> {
+    public async getFormSession(sessionId: string): Promise<{ data: sessionData; sessionId: string }> {
         await this.ensureConnection();
 
         try {
@@ -103,7 +103,7 @@ class RedisService {
             if (!data) {
                 throw new Error(`Session with ID ${sessionId} not found`);
             }
-            return { sessiondata: JSON.parse(data), sessionId };
+            return { data: JSON.parse(data), sessionId };
         } catch (error) {
             console.error('Error getting session:', error);
             throw error;

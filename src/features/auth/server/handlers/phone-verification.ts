@@ -1,21 +1,16 @@
 import { HandleProps } from "@/types/auth";
 import { AuthResponseBuilder } from "@/lib/response-builder";
-import { validateInput, phoneSchema } from "@/lib/validators";
 import { handleAuthError } from "@/lib/error-handler";
 import { db } from "@/lib/db";
 import { sendSMSMobile } from "../utils";
 import { FlowType, ScreenType, FieldType, EventType } from "@/types";
 import { createResponseData, findEnumKey } from "@/lib/utils";
-import { z } from "zod";
 import { redisService } from "@/features/auth/server/utils/redis";
 
 export async function handlePhoneVerification({ session, fieldAnswers }: HandleProps) {
     try {
-        const phoneCountryCode = validateInput(
-            z.string().min(2),
-            fieldAnswers[0].phoneCountryCode
-        );
-        const phonenumber = validateInput(phoneSchema, fieldAnswers[1].phoneNumber);
+        const phoneCountryCode = fieldAnswers[0].phoneCountryCode!;
+        const phonenumber =  fieldAnswers[1].phoneNumber!;
 
         const existingUser = await db.user.findUnique({
             where: { phonenumber, phoneCountryCode }
