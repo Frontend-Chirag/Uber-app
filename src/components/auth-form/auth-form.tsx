@@ -67,7 +67,7 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
     const isInital = flowType === FlowType.INITIAL;
     const isFirstNameLastName = screenType === ScreenType.FIRST_NAME_LAST_NAME;
 
-    const { mutateAsync, data: resData, isPending } = useSubmit;
+    const { mutateAsync, data: resData, isPending } = useSubmit();
 
     const [timeLeft, setTimeLeft] = useState(15);
     const [isCompleted, setIsCompleted] = useState(false);

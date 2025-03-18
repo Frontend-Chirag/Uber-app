@@ -13,6 +13,8 @@ const app = new Hono()
 
     const { flowType, screenAnswers: { eventType, screenType, fieldAnswers }, inAuthSessionID } = c.req.valid('json');
 
+    console.log('fieldAnswers', fieldAnswers);
+
     let session: Session;
 
     if (!inAuthSessionID) {
@@ -24,8 +26,7 @@ const app = new Hono()
 
     const data = await authHandler.handle(flowType, screenType, eventType, { fieldAnswers, session })
 
-    return data
-    // authHandler.handlers['PHONE_VERIFICATION']({})
+    return c.json(data)
   });
 
 export default app;

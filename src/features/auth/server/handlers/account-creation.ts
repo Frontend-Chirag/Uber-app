@@ -8,19 +8,19 @@ import { db } from "@/lib/db";
 
 export async function handleCreateAccount({ session }: HandleProps) {
     try {
-        const { sessiondata } = session;
+        const { data } = session;
 
-        if (!sessiondata) {
+        if (!data) {
             throw new AuthError(AUTH_ERRORS.SESSION_NOT_FOUND);
         }
 
         const userData = {
-            firstname: sessiondata.firstname!,
-            lastname: sessiondata.lastname!,
-            email: sessiondata.email!,
-            phoneCountryCode: sessiondata.phoneCountryCode!,
-            phonenumber: sessiondata.phonenumber!,
-            role: sessiondata.type!
+            firstname: data.firstname!,
+            lastname: data.lastname!,
+            email: data.email!,
+            phoneCountryCode: data.phoneCountryCode!,
+            phonenumber: data.phonenumber!,
+            role: data.type!
         };
 
         const user = await db.user.create({ data: userData });

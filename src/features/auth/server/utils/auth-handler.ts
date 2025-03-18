@@ -1,4 +1,4 @@
-import { HandleProps } from "@/types/auth";
+import { AuthResponse, HandleProps } from "@/types/auth";
 import { handleAuthError, AuthError } from "@/lib/error-handler";
 import { handleEmailVerification } from "../handlers/email-verification";
 import { handlePhoneVerification } from "../handlers/phone-verification";
@@ -9,7 +9,7 @@ import { EventType, FlowType, ScreenType } from "@/types";
 
 type AuthHandlerType = {
     handlers: Record<FlowType, Partial<Record<ScreenType, Partial<Record<EventType, (props: HandleProps) => Promise<any>>>>>>;
-    handle(flow: FlowType, screen: ScreenType, event: EventType, props: HandleProps): Promise<any>;
+    handle(flow: FlowType, screen: ScreenType, event: EventType, props: HandleProps): Promise<AuthResponse>;
 };
 
 export const authHandler: AuthHandlerType = {
@@ -54,7 +54,7 @@ export const authHandler: AuthHandlerType = {
         },
     },
 
-    async handle(flow: FlowType, screen: ScreenType, event: EventType, props: HandleProps) {
+    async handle(flow: FlowType, screen: ScreenType, event: EventType, props: HandleProps): Promise<AuthResponse> {
         try {
             const handler = this.handlers[flow]?.[screen]?.[event];
             if (!handler) {

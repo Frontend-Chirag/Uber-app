@@ -9,17 +9,18 @@ import { getNextStep } from "../utils/navigation";
 
 export async function handleVerifyEmailOtp({ session, fieldAnswers }: HandleProps) {
     try {
-        const { sessiondata, sessionId } = session;
+        const { data, sessionId } = session;
+
 
         const otpCode = fieldAnswers[0].emailOTPCode!;
 
-        if (sessiondata.otp.value !== otpCode) {
+        if (data?.otp.value !== otpCode) {
             throw new AuthError(AUTH_ERRORS.INVALID_EMAIL_OTP);
         }
 
-        if (sessiondata.flowState === FlowType.LOGIN) {
+        if (data?.flowState === FlowType.LOGIN) {
             const user = await db.user.findUnique({
-                where: { email: sessiondata.email! }
+                where: { email: data?.email }
             });
 
             if (!user) {
@@ -53,18 +54,18 @@ export async function handleVerifyEmailOtp({ session, fieldAnswers }: HandleProp
 
 export async function handleVerifyPhoneOtp({ session, fieldAnswers }: HandleProps) {
     try {
-        const { sessiondata, sessionId } = session;
+        const { data, sessionId } = session;
         const otpCode = fieldAnswers[0].phoneOTPCode!;
 
-        if (sessiondata.otp.value !== otpCode) {
+        if (data?.otp.value !== otpCode) {
             throw new AuthError(AUTH_ERRORS.INVALID_PHONE_OTP);
         }
 
-        if (sessiondata.flowState === FlowType.LOGIN) {
+        if (data?.flowState === FlowType.LOGIN) {
             const user = await db.user.findUnique({
                 where: {
-                    phonenumber: sessiondata.phonenumber!,
-                    phoneCountryCode: sessiondata.phoneCountryCode!
+                    phonenumber: data?.phonenumber!,
+                    phoneCountryCode: data?.phoneCountryCode!
                 }
             });
 

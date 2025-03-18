@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { Role } from "@prisma/client";
 import { EventType, FieldType, FlowType, ScreenType } from "@/types";
 import { FieldValidationSchema } from "@/components/fieldConfig";
 
@@ -21,10 +20,35 @@ export const AuthSchema = z.object({
     screenAnswers: z.object({
         screenType: z.nativeEnum(ScreenType),
         eventType: z.nativeEnum(EventType),
-        fieldAnswers: z.array(z.object({
-            fieldType: z.nativeEnum(FieldType),
-            valueSchema
-        }))
+        fieldAnswers: z.array(
+            z.object({
+                fieldType: z.nativeEnum(FieldType)
+            }).passthrough()
+        ).superRefine((fieldAnswers, ctx) => {
+            fieldAnswers.forEach((answer, index) => {
+                const fieldType = answer.fieldType;
+                const validationSchema = FieldValidationSchema[fieldType];
+
+                if (!validationSchema) {
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: `Invalid field type: ${fieldType}`,
+                        path: [`fieldAnswers[${index}].fieldType`],
+                    });
+                    return;
+                }
+
+                const result = validationSchema.safeParse(answer[fieldType]);
+
+                if (!result.success) {
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: `Invalid value for fieldType ${fieldType}: ${result.error.message}`,
+                        path: [`fieldAnswers[${index}].${fieldType}`],
+                    });
+                }
+            })
+        })
     }),
     inAuthSessionID: z.string().nonempty("Session ID is required"),
 });

@@ -6,9 +6,15 @@ import { useMutation } from '@tanstack/react-query';
 type RequestType = InferRequestType<typeof honoClient.api.auth.submit['$post']>
 type ResponseType = InferResponseType<typeof honoClient.api.auth.submit['$post']>
 
-export const useSubmit = useMutation<ResponseType, Error, RequestType>({
-    mutationFn: async ({ json }) => {
-        const response = await honoClient.api.auth.submit['$post']({ json });
-        return response.json(); // Ensure the return type matches ResponseType
-    }
-})
+export const useSubmit = () => {
+    return useMutation<ResponseType, Error, RequestType>({
+        mutationFn: async ({ json }) => {
+            const response = await honoClient.api.auth.submit['$post']({ json });
+            if (!response.ok) {
+                const errordata = await response.json();
+                throw new Error(errordata.error);
+            }
+            return response.json(); // Ensure the return type matches ResponseType
+        }
+    })
+}
