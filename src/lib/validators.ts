@@ -14,20 +14,22 @@ const valueSchema = z.union([
     FieldValidationSchema[FieldType.AGREE_TERMS_AND_CONDITIONS],
 ]);
 
-
+// Zod Schema for Authentication Payload
 export const AuthSchema = z.object({
     flowType: z.nativeEnum(FlowType),
+    inAuthSessionID: z.string().nullable(),
     screenAnswers: z.object({
         screenType: z.nativeEnum(ScreenType),
         eventType: z.nativeEnum(EventType),
         fieldAnswers: z.array(
             z.object({
-                fieldType: z.nativeEnum(FieldType)
-            }).passthrough()
+                fieldType: z.enum(Object.keys(FieldType) as [keyof typeof FieldType]), // Enum validation for fieldType
+            }).passthrough() // Allow extra dynamic fields
         ).superRefine((fieldAnswers, ctx) => {
             fieldAnswers.forEach((answer, index) => {
-                const fieldType = answer.fieldType;
-                const validationSchema = FieldValidationSchema[fieldType];
+                const fieldType = FieldType[answer.fieldType];
+
+                const validationSchema = FieldValidationSchema[fieldType]; // Get the correct schema
 
                 if (!validationSchema) {
                     ctx.addIssue({
@@ -38,20 +40,21 @@ export const AuthSchema = z.object({
                     return;
                 }
 
-                const result = validationSchema.safeParse(answer[fieldType]);
+                // Validate the dynamic field (e.g., emailAddress, phoneNumber)
+                const result = validationSchema.safeParse(answer);
 
                 if (!result.success) {
                     ctx.addIssue({
                         code: z.ZodIssueCode.custom,
-                        message: `Invalid value for fieldType ${fieldType}: ${result.error.message}`,
-                        path: [`fieldAnswers[${index}].${fieldType}`],
+                        message: `Invalid value for fieldType ${fieldType}: ${result.error.errors.map(e => e.message).join(", ")}`,
+                        path: [`fieldAnswers[${index}]`],
                     });
                 }
-            })
+            });
         })
     }),
-    inAuthSessionID: z.string().nonempty("Session ID is required"),
 });
+
 
 
 export const validateInput = <T>(schema: z.ZodSchema<T>, data: unknown): T => {

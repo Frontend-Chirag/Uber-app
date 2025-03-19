@@ -36,8 +36,6 @@ const emailTransporter = nodemailer.createTransport({
 // Initialize Twilio client
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-// In-memory OTP store (Replace with Redis or database in production)
-const otpStore = new Map<string, OTP>();
 
 const generateOtp = (expirationTimeInMinutes: number = DEFAULT_EXPIRATION_MINUTES): OTP => {
     // Generate a 4-digit OTP using crypto-safe random in production
@@ -67,8 +65,6 @@ export const sendOTPEmail = async ({ email }: EmailParams): Promise<OTP> => {
         // TODO: Implement rate limiting here
         const otp = generateOtp();
         
-        // Store OTP (replace with database in production)
-        otpStore.set(email, otp);
 
         await emailTransporter.sendMail({
             from: process.env.EMAIL_USER,
@@ -102,9 +98,7 @@ export const sendSMSMobile = async ({ phonenumber, phoneCountryCode }: SMSParams
 
         // TODO: Implement rate limiting here
         const otp = generateOtp();
-        
-        // Store OTP (replace with database in production)
-        otpStore.set(`${phoneCountryCode}${phonenumber}`, otp);
+    
 
         await twilioClient.messages.create({
             body: `Your verification code is ${otp.value}. This code will expire in ${DEFAULT_EXPIRATION_MINUTES} minutes.`,
@@ -119,19 +113,19 @@ export const sendSMSMobile = async ({ phonenumber, phoneCountryCode }: SMSParams
     }
 };
 
-// Utility function to verify OTP
-export const verifyOTP = (identifier: string, otpValue: string): boolean => {
-    const storedOTP = otpStore.get(identifier);
+// // Utility function to verify OTP
+// export const verifyOTP = (identifier: string, otpValue: string): boolean => {
+//     const storedOTP = otpStore.get(identifier);
     
-    if (!storedOTP) {
-        return false;
-    }
+//     if (!storedOTP) {
+//         return false;
+//     }
 
-    const isValid = storedOTP.value === otpValue && Date.now() <= storedOTP.expiresAt;
+//     const isValid = storedOTP.value === otpValue && Date.now() <= storedOTP.expiresAt;
     
-    if (isValid) {
-        otpStore.delete(identifier); // Delete OTP after successful verification
-    }
+//     if (isValid) {
+//         otpStore.delete(identifier); // Delete OTP after successful verification
+//     }
 
-    return isValid;
-};
+//     return isValid;
+// };

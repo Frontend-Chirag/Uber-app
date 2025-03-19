@@ -15,18 +15,18 @@ const app = new Hono()
 
     console.log('fieldAnswers', fieldAnswers);
 
-    let session: Session;
+    // let session: Session;
 
-    if (!inAuthSessionID) {
-      const sessionId = uuid();
-      session = await redisService.createFormSession({ sessionId, data: null })
-    } else {
-      session = await redisService.getFormSession(inAuthSessionID)
-    }
+    // if (!inAuthSessionID) {
+    //   const sessionId = uuid();
+    //   session = await redisService.createFormSession({ sessionId, data: null })
+    // } else {
+    //   session = await redisService.getFormSession(inAuthSessionID)
+    // }
 
-    const data = await authHandler.handle(flowType, screenType, eventType, { fieldAnswers, session })
+    // const data = await authHandler.handle(flowType, screenType, eventType, { fieldAnswers, session })
 
-    return c.json(data)
+    return c.json({message: 'success'})
   });
 
 export default app;

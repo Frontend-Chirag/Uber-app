@@ -9,7 +9,10 @@ import { getEmailVerificationStep } from "../utils/navigation";
 
 export async function handleEmailVerification({ session, fieldAnswers }: HandleProps) {
     try {
-        const email = fieldAnswers[0].emailAddress!;
+
+        console.log('fieldAnswers', fieldAnswers)
+
+        const email = fieldAnswers[0].fieldType!;
         
         const existingUser = await db.user.findUnique({
             where: { email }
