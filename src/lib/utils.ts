@@ -21,4 +21,9 @@ export const createResponseData = ({ flowType, sessionId, screenType, fields, ev
   };
 };
 
-export const findEnumKey = (key: FieldType) => Object.entries(FieldType).find(([_, value]) => value === key)?.[0];
+export const findEnumKey = (value: string): keyof typeof FieldType | undefined => {
+  return Object.keys(FieldType).find(
+      (key) => FieldType[key as keyof typeof FieldType] === value
+  ) as keyof typeof FieldType | undefined;
+};
+

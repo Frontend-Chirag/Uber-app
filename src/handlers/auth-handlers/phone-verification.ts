@@ -1,16 +1,17 @@
 import { HandleProps } from "@/types/auth";
 import { AuthResponseBuilder } from "@/lib/response-builder";
 import { handleAuthError } from "@/lib/error-handler";
-import { db } from "@/lib/db";
-import { sendSMSMobile } from "../utils";
+import { db } from "@/lib/db/prisma";
+import { sendSMSMobile } from "@/helper/auth-helper";
 import { FlowType, ScreenType, FieldType, EventType } from "@/types";
 import { createResponseData, findEnumKey } from "@/lib/utils";
-import { redisService } from "@/features/auth/server/utils/redis";
+import { redisService } from "@/lib/db/redis";
+
 
 export async function handlePhoneVerification({ session, fieldAnswers }: HandleProps) {
     try {
-        const phoneCountryCode = fieldAnswers[0].phoneCountryCode!;
-        const phonenumber =  fieldAnswers[1].phoneNumber!;
+        const phoneCountryCode = fieldAnswers[0].phoneCountryCode as string;
+        const phonenumber =  fieldAnswers[1].phoneNumber as string;
 
         const existingUser = await db.user.findUnique({
             where: { phonenumber, phoneCountryCode }

@@ -1,26 +1,25 @@
 import { HandleProps } from "@/types/auth";
 import { AuthResponseBuilder } from "@/lib/response-builder";
 import { handleAuthError } from "@/lib/error-handler";
-import { db } from "@/lib/db";
-import { sendOTPEmail } from "../utils";
-import { FlowType} from "@/types";
-import { redisService } from "@/features/auth/server/utils/redis";
-import { getEmailVerificationStep } from "../utils/navigation";
+import { db } from "@/lib/db/prisma";
+import { sendOTPEmail } from "@/helper/auth-helper";
+import {getEmailVerificationStep} from './next-step';
+import { FlowType } from "@/types";
+import { redisService } from "@/lib/db/redis";
 
 export async function handleEmailVerification({ session, fieldAnswers }: HandleProps) {
     try {
 
-        console.log('fieldAnswers', fieldAnswers)
 
-        const email = fieldAnswers[0].fieldType!;
-        
+        const email = fieldAnswers[0].emailAddress as string;
+
         const existingUser = await db.user.findUnique({
             where: { email }
         });
 
         const flowState = existingUser ? FlowType.LOGIN : FlowType.SIGN_UP;
         const otp = await sendOTPEmail({ email });
-        
+
         const newSession = await redisService.updateFormSession(session.sessionId, {
             otp,
             email,

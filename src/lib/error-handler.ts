@@ -1,5 +1,6 @@
+import { AUTH_ERRORS } from "./constants";
 import { AuthResponseBuilder } from "./response-builder";
-import { AUTH_ERRORS } from "@/features/auth/server/utils/constants";
+
 
 export class AuthError extends Error {
     constructor(

@@ -1,9 +1,8 @@
 import { HandleProps } from "@/types/auth";
 import { AuthResponseBuilder } from "@/lib/response-builder";
-import { validateInput } from "@/lib/validators";
 import { handleAuthError, AuthError } from "@/lib/error-handler";
-import { AUTH_ERRORS, AUTH_SUCCESS } from "../utils/constants";
-import { db } from "@/lib/db";
+import { AUTH_ERRORS, AUTH_SUCCESS } from "@/lib/constants";
+import { db } from "@/lib/db/prisma";
 
 
 export async function handleCreateAccount({ session }: HandleProps) {

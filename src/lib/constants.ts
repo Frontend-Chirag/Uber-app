@@ -85,9 +85,9 @@ export const AUTH_ERRORS = {
     USER_NOT_FOUND: 'User not found',
     SESSION_NOT_FOUND: 'Session data not found',
     UNKNOWN_ERROR: 'Unknown error',
-  } as const;
-  
-  export const AUTH_SUCCESS = {
+} as const;
+
+export const AUTH_SUCCESS = {
     LOGIN: 'Login successful',
     ACCOUNT_CREATED: 'Account created successfully',
-  } as const; 
+} as const; 

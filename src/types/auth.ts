@@ -1,15 +1,8 @@
+import { z } from "zod";
 import { User } from "./user";
 import { FieldType, ResponseDataReturnProps, Session } from "@/types";
+import { AuthSchema } from "@/validators/validate-server";
 
-export interface FieldAnswers {
-    emailAddress?: string;
-    phoneCountryCode?: string;
-    phoneNumber?: string;
-    emailOTPCode?: string;
-    phoneOTPCode?: string;
-    firstname?: string;
-    lastname?: string;
-}
 
 export interface AuthResponse {
     status: number;
@@ -19,9 +12,9 @@ export interface AuthResponse {
     form?: ResponseDataReturnProps;
 }
 
+type FieldAnswers = z.infer<typeof AuthSchema>['screenAnswers']['fieldAnswers'][number]
+
 export interface HandleProps {
     session: Session;
-    fieldAnswers: {
-        fieldType: FieldType,
-    }[];
+    fieldAnswers: FieldAnswers[];
 } 

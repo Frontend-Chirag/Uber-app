@@ -1,18 +1,23 @@
+import { handleEmailVerification } from "./email-verification";
+import { handlePhoneVerification } from "./phone-verification";
+import { handleVerifyEmailOtp, handleVerifyPhoneOtp } from "./otp-verification";
+import { handleInputDetails } from "./user-details";
+import { handleCreateAccount } from "./account-creation";
+import {
+    FlowType,
+    ScreenType,
+    EventType,
+} from "@/types";
 import { AuthResponse, HandleProps } from "@/types/auth";
-import { handleAuthError, AuthError } from "@/lib/error-handler";
-import { handleEmailVerification } from "../handlers/email-verification";
-import { handlePhoneVerification } from "../handlers/phone-verification";
-import { handleVerifyEmailOtp, handleVerifyPhoneOtp } from "../handlers/otp-verification";
-import { handleInputDetails } from "../handlers/user-details";
-import { handleCreateAccount } from "../handlers/account-creation";
-import { EventType, FlowType, ScreenType } from "@/types";
+import { AuthError, handleAuthError } from "@/lib/error-handler";
+
 
 type AuthHandlerType = {
     handlers: Record<FlowType, Partial<Record<ScreenType, Partial<Record<EventType, (props: HandleProps) => Promise<any>>>>>>;
     handle(flow: FlowType, screen: ScreenType, event: EventType, props: HandleProps): Promise<AuthResponse>;
 };
 
-export const authHandler: AuthHandlerType = {
+const authHandler: AuthHandlerType = {
     handlers: {
         [FlowType.INITIAL]: {
             [ScreenType.PHONE_NUMBER_INITIAL]: {
@@ -66,3 +71,14 @@ export const authHandler: AuthHandlerType = {
         }
     }
 };
+
+
+export {
+    handleEmailVerification,
+    handlePhoneVerification,
+    handleVerifyEmailOtp,
+    handleVerifyPhoneOtp,
+    handleInputDetails,
+    handleCreateAccount,
+    authHandler
+}

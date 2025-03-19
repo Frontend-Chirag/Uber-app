@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { FlowType, FieldType, ScreenType, EventType } from '@/types';
 import * as z from 'zod';
-import { FieldValidationSchema } from '@/components/fieldConfig';
+import { FieldValidationSchema } from '@/validators/validate-client';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FormProvider, useForm } from 'react-hook-form';
 import { formatTime, phoneCountryCodes } from '@/lib/constants';
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, findEnumKey } from '@/lib/utils';
 import { useSubmit } from '@/features/auth/api/auth-api';
 
 
@@ -108,11 +108,7 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
         defaultValues
     });
 
-    const findEnumKey = (value: string): keyof typeof FieldType | undefined => {
-        return Object.keys(FieldType).find(
-            (key) => FieldType[key as keyof typeof FieldType] === value
-        ) as keyof typeof FieldType | undefined;
-    };
+
     const onSubmit = useCallback(async (data: Record<FieldType, string>) => {
 
         mutateAsync({
@@ -133,9 +129,7 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
             }
         });
 
-
-
-
+        
 
         // try {
         //     setIsLoadingNextScreen(true);

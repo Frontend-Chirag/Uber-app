@@ -1,17 +1,16 @@
 import { HandleProps } from "@/types/auth";
 import { AuthResponseBuilder } from "@/lib/response-builder";
-import { validateInput } from "@/lib/validators";
 import { handleAuthError } from "@/lib/error-handler";
-import { redisService } from "@/features/auth/server/utils/redis";
+import { redisService } from "@/lib/db/redis";
 import { FlowType, ScreenType, FieldType, EventType } from "@/types";
 import { createResponseData, findEnumKey } from "@/lib/utils";
-import { z } from "zod";
 
 export async function handleInputDetails({ session, fieldAnswers }: HandleProps) {
     try {
+
         const details = {
-            firstname: fieldAnswers[0].firstname,
-            lastname: fieldAnswers[1].lastname
+            firstname: fieldAnswers[0].firstName as string,
+            lastname: fieldAnswers[1].lastName as string
         }
 
 

@@ -1,18 +1,19 @@
 import { HandleProps } from "@/types/auth";
 import { AuthResponseBuilder } from "@/lib/response-builder";
 import { handleAuthError, AuthError } from "@/lib/error-handler";
-import { AUTH_ERRORS, AUTH_SUCCESS } from "../utils/constants";
-import { db } from "@/lib/db";
-import { redisService } from "@/features/auth/server/utils/redis";
+import { AUTH_ERRORS, AUTH_SUCCESS } from "@/lib/constants";
+import { db } from "@/lib/db/prisma";
+import { redisService } from "@/lib/db/redis";
 import { FlowType } from "@/types";
-import { getNextStep } from "../utils/navigation";
+
+import {getNextStep} from './next-step';
 
 export async function handleVerifyEmailOtp({ session, fieldAnswers }: HandleProps) {
     try {
         const { data, sessionId } = session;
 
 
-        const otpCode = fieldAnswers[0].emailOTPCode!;
+        const otpCode = fieldAnswers[0].emailOTPCode;
 
         if (data?.otp.value !== otpCode) {
             throw new AuthError(AUTH_ERRORS.INVALID_EMAIL_OTP);
@@ -20,7 +21,7 @@ export async function handleVerifyEmailOtp({ session, fieldAnswers }: HandleProp
 
         if (data?.flowState === FlowType.LOGIN) {
             const user = await db.user.findUnique({
-                where: { email: data?.email }
+                where: { email: data?.email! }
             });
 
             if (!user) {

@@ -1,18 +1,7 @@
 import { z } from "zod";
 import { EventType, FieldType, FlowType, ScreenType } from "@/types";
-import { FieldValidationSchema } from "@/components/fieldConfig";
+import { FieldValidationSchema } from "./validate-client";
 
-
-const valueSchema = z.union([
-    FieldValidationSchema[FieldType.PHONE_COUNTRY_CODE],
-    FieldValidationSchema[FieldType.PHONE_NUMBER],
-    FieldValidationSchema[FieldType.PHONE_SMS_OTP],
-    FieldValidationSchema[FieldType.EMAIL_ADDRESS],
-    FieldValidationSchema[FieldType.EMAIL_OTP_CODE],
-    FieldValidationSchema[FieldType.FIRST_NAME],
-    FieldValidationSchema[FieldType.LAST_NAME],
-    FieldValidationSchema[FieldType.AGREE_TERMS_AND_CONDITIONS],
-]);
 
 // Zod Schema for Authentication Payload
 export const AuthSchema = z.object({
@@ -27,9 +16,9 @@ export const AuthSchema = z.object({
             }).passthrough() // Allow extra dynamic fields
         ).superRefine((fieldAnswers, ctx) => {
             fieldAnswers.forEach((answer, index) => {
-                const fieldType = FieldType[answer.fieldType];
-
-                const validationSchema = FieldValidationSchema[fieldType]; // Get the correct schema
+                const { fieldType, ...rest } = answer;
+                const validationSchema = FieldValidationSchema[FieldType[fieldType]]; // Get the correct schema
+                const dyanmicValue = rest[Object.keys(rest)[0]];
 
                 if (!validationSchema) {
                     ctx.addIssue({
@@ -39,9 +28,7 @@ export const AuthSchema = z.object({
                     });
                     return;
                 }
-
-                // Validate the dynamic field (e.g., emailAddress, phoneNumber)
-                const result = validationSchema.safeParse(answer);
+                const result = validationSchema.safeParse(dyanmicValue);
 
                 if (!result.success) {
                     ctx.addIssue({
