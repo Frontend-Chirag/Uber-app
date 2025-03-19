@@ -9,7 +9,12 @@ type ResponseType = InferResponseType<typeof honoClient.api.auth.submit['$post']
 export const useSubmit = () => {
     const mutation = useMutation<ResponseType, Error, RequestType>({
         mutationFn: async ({ json }) => {
-            const response = await honoClient.api.auth.submit['$post']({ json });
+            const response = await honoClient.api.auth.submit['$post']({ json }, {
+                headers: {
+                    'X-Driver-Status': 'true',  // ✅ Sending isDRIVER in headers
+                    'Content-Type': 'application/json'
+                }
+            });
             if (!response.ok) {
                 const errordata = await response.json();
                 throw new Error(errordata.error);
@@ -19,4 +24,4 @@ export const useSubmit = () => {
     });
 
     return mutation;
-}
+} 
