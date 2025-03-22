@@ -49,7 +49,7 @@ export interface sessionData {
     flowState: FlowType;
     firstname?: string | null;
     lastname?: string | null;
-    otp: {
+    otp?: {
         value: string | null;
         expiresAt: number | null;
     };
@@ -74,13 +74,13 @@ interface Screens {
     eventType: EventType; 
 };
 
-interface Form {
+interface NextStep {
     flowType: FlowType;
     screens: Screens
 };
 
 export interface ResponseDataReturnProps {
-    form: Form;
+    nextStep: NextStep;
     inAuthSessionID: string
 };
 

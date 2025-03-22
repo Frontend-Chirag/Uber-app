@@ -13,6 +13,8 @@ import { formatTime, phoneCountryCodes } from '@/lib/constants';
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react';
 import { cn, findEnumKey } from '@/lib/utils';
 import { useSubmit } from '@/features/auth/api/auth-api';
+import { useRouter } from 'next/router';
+import { useSearchParams } from 'next/navigation';
 
 
 export interface OtpSectionProps {
@@ -45,7 +47,8 @@ export interface AuthFormData {
 
 export const AuthForm = ({ children }: { children: React.ReactNode }) => {
 
-    const isDriver = true;
+    const params = useSearchParams();
+    const role = params.get("role") as "Driver" | "Rider";
 
     const {
         flowType,
@@ -67,7 +70,7 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
     const isInital = flowType === FlowType.INITIAL;
     const isFirstNameLastName = screenType === ScreenType.FIRST_NAME_LAST_NAME;
 
-    const { mutateAsync, data: resData, isPending } = useSubmit();
+    const { mutateAsync, isPending } = useSubmit(role);
 
     const [timeLeft, setTimeLeft] = useState(15);
     const [isCompleted, setIsCompleted] = useState(false);
@@ -81,6 +84,7 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
 
         return () => clearInterval(timer);
     }, [timeLeft]);
+
 
     const handleResendOtp = useCallback(() => {
         setTimeLeft(15);
@@ -97,7 +101,7 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
     const defaultValues = useMemo(() =>
         fieldType.reduce((values, field) => {
             values[field] = field === FieldType.PHONE_COUNTRY_CODE
-                ? phoneCountryCodes[0].code
+                ? phoneCountryCodes[0]?.code
                 : "";
             return values;
         }, {} as Record<FieldType, string>)
@@ -108,28 +112,58 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
         defaultValues
     });
 
+    const onSubmit = useCallback(async (formdata: Record<FieldType, string>) => {
 
-    const onSubmit = useCallback(async (data: Record<FieldType, string>) => {
-
-        mutateAsync({
-            json: {
-                flowType,
-                screenAnswers: {
-                    screenType,
-                    eventType,
-                    fieldAnswers: Object.entries(data).map(([key, value]) => {
-                        const fieldType = findEnumKey(key); // Get enum key from value
-                        if (!fieldType) {
-                            throw new Error(`Invalid fieldType for key: ${key}`);
-                        }
-                        return { fieldType, [key]: value ?? null }; // Ensure correct field mapping
-                    })
-                },
-                inAuthSessionID
+        try {
+            setIsLoadingNextScreen(true)
+            const response = await mutateAsync({
+                json: {
+                    flowType,
+                    screenAnswers: {
+                        screenType,
+                        eventType,
+                        fieldAnswers: Object.entries(formdata).map(([key, value]) => {
+                            const fieldType = findEnumKey(key); // Get enum key from value
+                            if (!fieldType) {
+                                throw new Error(`Invalid fieldType for key: ${key}`);
+                            }
+                            return { fieldType, [key]: value ?? null }; // Ensure correct field mapping
+                        })
+                    },
+                    inAuthSessionID
+                }
+            });
+            console.log('before', response)
+            if (response) {
+                console.log('after', response)
+                const { form } = response;
+                if (form && form.nextStep && form.inAuthSessionID) {
+                    console.log(form)
+                    const { nextStep: { flowType, screens }, inAuthSessionID } = form;
+                    setFlowType(flowType);
+                    setEventType(screens.eventType);
+                    const reverseFieldTypeMap = new Map(
+                        Object.entries(FieldType).map(([key, value]) => [key, value])
+                    );
+                    console.log(reverseFieldTypeMap)
+                    console.log(screens.fields.map((field: any) => reverseFieldTypeMap.get(field.fieldType) ?? field.fieldType))
+                    setFieldType(screens.fields.map((field: any) => reverseFieldTypeMap.get(field.fieldType) ?? field.fieldType));
+                    setScreenType(screens.screenType);
+                    setInAuthSessionID(inAuthSessionID);
+                    setHintValue(screens.fields[0].hintValue!);
+                }
             }
-        });
 
-        
+        } catch (error) {
+            console.log(error);
+        } finally {
+            form.reset();
+            setIsLoadingNextScreen(false);
+        }
+
+
+
+
 
         // try {
         //     setIsLoadingNextScreen(true);
@@ -157,12 +191,12 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
         //     form.reset();
         //     setIsLoadingNextScreen(false);
         // }
-    }, [flowType, screenType, eventType, inAuthSessionID, isDriver, setIsLoadingNextScreen, setFlowType, setScreenType, setFieldType, setHintValue, setEventType, setInAuthSessionID]);
+    }, [flowType, screenType, eventType, inAuthSessionID, role, setIsLoadingNextScreen, setFlowType, setScreenType, setFieldType, setHintValue, setEventType, setInAuthSessionID]);
 
     return (
         <FormProvider {...form}>
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className='w-full flex flex-col'>
+                <form onSubmit={form.handleSubmit(onSubmit)} className='w-full flex flex-col justify-between gap-3.5'>
                     {children}
                     <OtpSection
                         isSignup={isSignup}
@@ -188,6 +222,11 @@ AuthForm.displayName = 'AuthForm';
 
 
 const FormButton = memo(({ isInitial, isValid, isSubmitting }: FormButtonProps) => {
+
+    const { flowType, screenType } = useAuthFlow();
+
+    const isProgressive = flowType === FlowType.PROGRESSIVE_SIGN_UP && screenType === (ScreenType.EMAIL_ADDRESS_PROGESSIVE || ScreenType.PHONE_NUMBER_PROGRESSIVE);
+
     if (isInitial) {
         return (
             <Button
@@ -200,19 +239,25 @@ const FormButton = memo(({ isInitial, isValid, isSubmitting }: FormButtonProps) 
         );
     }
 
+    const skip = () => {
+       console.log('skip')
+    }
+
+    const reset = () => {
+
+    }
+
     return (
-        <div className='flex justify-between items-center mt-8'>
+        <div className='flex justify-between items-center '>
             <Button
-                onClick={() => { }}
+                onClick={isProgressive ? skip : reset}
                 size='icon'
                 type='button'
                 variant='ghost'
                 className='rounded-full hover:bg-white'
             >
-                {/* {iconName
-                    ? iconName
-                    : <ArrowLeftIcon className='size-6' />
-                } */}
+                {isProgressive ? 'skip' : <ArrowLeftIcon className='size-6' />}
+
             </Button>
             <Button
                 onClick={() => { }}

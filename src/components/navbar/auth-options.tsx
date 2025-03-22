@@ -28,7 +28,7 @@ export const AuthOptions = ({ Options, name, className, path }: AuthOptionsProps
             >
                 <div className='text-4xl font-Rubik-SemiBold text-primary hover:text-neutral-500 bg-white hover:bg-white'>
                     <Link
-                        href={`/${path}`}
+                        href={`/${path}?role=${option.type}`}
                         className='flex-1 flex justify-between items-center cursor-pointer'
                     >
                         {option.name}

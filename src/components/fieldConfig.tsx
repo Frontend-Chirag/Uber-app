@@ -21,8 +21,8 @@ export interface RenderFieldProps {
 }
 
 export interface BaseFieldProps {
-    label: string;
     placeholder: string;
+    label?: string;
     type?: string;
     renderContent?: () => React.ReactNode;
 }
@@ -49,23 +49,22 @@ MemoizedOTPGroup.displayName = 'MemoizedOTPGroup';
 
 const MemoizedCountryCodeContent = memo(({ field }: { field: any }) => (
     <>
-        <SelectTrigger className="h-full w-[100px] font-Rubik-SemiBold text-xl border-2 outline-none focus:ring-0 border-black">
-            <SelectValue />
-        </SelectTrigger>
+        <FormControl>
+            <SelectTrigger className="h-full w-[100px] font-Rubik-SemiBold text-xl border-2 outline-none focus:ring-0 border-black">
+                <SelectValue />
+            </SelectTrigger>
+        </FormControl>
         <SelectContent className="py-2">
-            {phoneCountryCodes.map((codes) => (
+            {phoneCountryCodes.map((codes, idx) => (
                 <SelectItem
-                    onSelect={() => {
-                        const selectedCountry = phoneCountryCodes.find(
-                            (c) => c.country === codes.country
-                        );
-                        field.onChange(selectedCountry?.code);
+                    onSelect={(e) => {
+                        field.onChange(codes.code);
                     }}
-                    key={codes.initial}
-                    value={field.value}
+                    key={idx}
+                    value={codes.code}
                     className="text-lg font-Rubik-SemiBold"
                 >
-                    {codes.country}
+                    {codes.initial}
                 </SelectItem>
             ))}
         </SelectContent>
@@ -73,31 +72,38 @@ const MemoizedCountryCodeContent = memo(({ field }: { field: any }) => (
 ));
 MemoizedCountryCodeContent.displayName = 'MemoizedCountryCodeContent';
 
+const inputBaseClass = "w-full h-14 px-4 md:text-lg rounded-lg bg-neutral-200 border-none focus-visible:ring-2 placeholder:text-xl";
+const formItemClass = "flex flex-1 flex-col relative";
+const formErrorClass = 'absolute -bottom-6 whitespace-nowrap';
+const labelClass = "text-2xl font-Rubik-normal";
+
+
 export const FIELD_CONFIG: Record<FieldType, FieldConfigProps> = {
     [FieldType.PHONE_COUNTRY_CODE]: {
         component: Select,
         props: {
             placeholder: "Select country code",
-            label: "",
         },
         renderField: ({ field, form, component: Component, props }) => (
             <FormField
                 key={field}
                 name={field}
                 control={form.control}
-                render={({ field }) => (
-                    <FormItem>
-                        <FormControl>
-                            <Component 
-                             {...field}
-                             {...props}
+                render={({ field }) => {
+                    return (
+                        <FormItem className="relative h-[58px]">
+                            <Component
+                                onValueChange={field.onChange}
+                                defaultValues={field.value}
+                                {...field}
+                                {...props}
                             >
                                 <MemoizedCountryCodeContent field={field} />
                             </Component>
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
+                            <FormMessage className={formErrorClass} />
+                        </FormItem>
+                    )
+                }}
             />
         )
     },
@@ -106,25 +112,29 @@ export const FIELD_CONFIG: Record<FieldType, FieldConfigProps> = {
         props: {
             type: "tel",
             placeholder: "Enter your phone number",
-            label: "What's your phone number or email?"
         },
-        renderField: ({ field, form, component: Component, props }) => (
+        renderField: ({ field, form, component: Component, props, isInitial, handleChangeEventEmailToPhone }) => (
             <FormField
                 key={field}
                 name={field}
                 control={form.control}
                 render={({ field }) => (
-                    <FormItem className='flex flex-1 flex-col'>
-                        <FormLabel className='text-2xl font-Rubik-normal'>{props.label}</FormLabel>
+                    <FormItem className={formItemClass}>
                         <FormControl>
                             <Component
                                 {...field}
                                 {...props}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                                    field.onChange(e);
+                                    if (isInitial) {
+                                        handleChangeEventEmailToPhone?.(e);
+                                    }
+                                }}
                                 autoFocus
-                                className='w-full h-14 px-4 md:text-lg rounded-lg bg-neutral-200 border-none focus-visible:ring-2 placeholder:text-xl'
+                                className={inputBaseClass}
                             />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className={formErrorClass} />
                     </FormItem>
                 )}
             />
@@ -135,7 +145,6 @@ export const FIELD_CONFIG: Record<FieldType, FieldConfigProps> = {
         props: {
             type: "text",
             placeholder: "Enter OTP",
-            label: 'Enter the 4-digit code sent via SMS to:',
             renderContent: () => <MemoizedOTPGroup />
         },
         renderField: ({ field, form, component: Component, props }) => (
@@ -150,7 +159,7 @@ export const FIELD_CONFIG: Record<FieldType, FieldConfigProps> = {
                                 {props.renderContent?.()}
                             </Component>
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className={formErrorClass} />
                     </FormItem>
                 )}
             />
@@ -161,18 +170,14 @@ export const FIELD_CONFIG: Record<FieldType, FieldConfigProps> = {
         props: {
             type: "email",
             placeholder: "Enter your email address",
-            label: "What's your phone number or email?"
         },
-        renderField: ({ field, form, component: Component, props, isFirstNameLastName, isInitial, handleChangeEventEmailToPhone }) => (
+        renderField: ({ field, form, component: Component, props, isInitial, handleChangeEventEmailToPhone }) => (
             <FormField
                 key={field}
                 name={field}
                 control={form.control}
                 render={({ field }) => (
-                    <FormItem className='flex flex-1 flex-col'>
-                        {isFirstNameLastName && (
-                            <FormLabel className='text-2xl font-Rubik-normal'>{props.label}</FormLabel>
-                        )}
+                    <FormItem className={formItemClass}>
                         <FormControl>
                             <Component
                                 {...field}
@@ -184,10 +189,10 @@ export const FIELD_CONFIG: Record<FieldType, FieldConfigProps> = {
                                         handleChangeEventEmailToPhone?.(e);
                                     }
                                 }}
-                                className='w-full h-14 px-4 md:text-lg rounded-lg bg-neutral-200 border-none focus-visible:ring-2 placeholder:text-xl'
+                                className={inputBaseClass}
                             />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className={formErrorClass} />
                     </FormItem>
                 )}
             />
@@ -198,7 +203,6 @@ export const FIELD_CONFIG: Record<FieldType, FieldConfigProps> = {
         props: {
             type: "text",
             placeholder: "Enter OTP",
-            label: 'Enter the 4-digit code sent to:',
             renderContent: () => <MemoizedOTPGroup />
         },
         renderField: ({ field, form, component: Component, props }) => (
@@ -207,13 +211,13 @@ export const FIELD_CONFIG: Record<FieldType, FieldConfigProps> = {
                 name={field}
                 control={form.control}
                 render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="relative">
                         <FormControl>
                             <Component {...field} maxLength={4}>
                                 {props.renderContent?.()}
                             </Component>
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className={formErrorClass} />
                     </FormItem>
                 )}
             />
@@ -232,17 +236,17 @@ export const FIELD_CONFIG: Record<FieldType, FieldConfigProps> = {
                 name={field}
                 control={form.control}
                 render={({ field }) => (
-                    <FormItem className='flex flex-1 flex-col'>
-                        <FormLabel className='text-2xl font-Rubik-normal'>{props.label}</FormLabel>
+                    <FormItem className={formItemClass}>
+                        <FormLabel className={labelClass}>{props.label}</FormLabel>
                         <FormControl>
                             <Component
                                 {...field}
                                 {...props}
                                 autoFocus
-                                className='w-full h-14 px-4 md:text-lg rounded-lg bg-neutral-200 border-none focus-visible:ring-2 placeholder:text-xl'
+                                className={inputBaseClass}
                             />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className={formErrorClass} />
                     </FormItem>
                 )}
             />
@@ -261,17 +265,16 @@ export const FIELD_CONFIG: Record<FieldType, FieldConfigProps> = {
                 name={field}
                 control={form.control}
                 render={({ field }) => (
-                    <FormItem className='flex flex-1 flex-col'>
-                        <FormLabel className='text-2xl font-Rubik-normal'>{props.label}</FormLabel>
+                    <FormItem className={formItemClass}>
+                        <FormLabel className={labelClass}>{props.label}</FormLabel>
                         <FormControl>
                             <Component
                                 {...field}
                                 {...props}
-                                autoFocus
-                                className='w-full h-14 px-4 md:text-lg rounded-lg bg-neutral-200 border-none focus-visible:ring-2 placeholder:text-xl'
+                                className={inputBaseClass}
                             />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className={formErrorClass} />
                     </FormItem>
                 )}
             />
@@ -289,7 +292,7 @@ export const FIELD_CONFIG: Record<FieldType, FieldConfigProps> = {
                 name={field}
                 control={form.control}
                 render={({ field }) => (
-                    <FormItem className='w-full flex h-[50px] flex-col justify-start items-end mt-12 mb-6'>
+                    <FormItem className='w-full flex h-[50px] flex-col justify-start items-end mt-12 mb-6 relative'>
                         <div className='w-full flex justify-between items-center'>
                             <FormLabel>{props.label}</FormLabel>
                             <FormControl>
@@ -300,7 +303,7 @@ export const FIELD_CONFIG: Record<FieldType, FieldConfigProps> = {
                                 />
                             </FormControl>
                         </div>
-                        <FormMessage />
+                        <FormMessage className={formErrorClass} />
                     </FormItem>
                 )}
             />

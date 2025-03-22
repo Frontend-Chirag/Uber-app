@@ -49,10 +49,14 @@ export const AuthFormFields = memo(() => {
         const value = event.target.value;
         const isEmail = value.length < 3 || /^[a-zA-Z]{3}$/.test(value.slice(0, 3));
 
+        console.log(isEmail);
+
         if (isEmail) {
             setFieldType([FieldType.EMAIL_ADDRESS]);
+            console.log('Email')
             setEventType(EventType.TypeInputEmail);
         } else {
+            console.log('phoneNumber')
             form.setValue('phoneNumber', value);
             setFieldType([FieldType.PHONE_COUNTRY_CODE, FieldType.PHONE_NUMBER]);
             setEventType(EventType.TypeInputMobile);
@@ -60,8 +64,8 @@ export const AuthFormFields = memo(() => {
     }, [form, setFieldType, setEventType]);
 
     return (
-        <div className={cn('flex w-full gap-x-2 h-full',
-            isFirstNameLastName ? 'flex-col gap-y-8 mt-4' : 'flex-row justify-start items-center')}>
+        <div className={cn('flex w-full justify-start items-start gap-x-2 ',
+            isFirstNameLastName ? 'flex-col  gap-y-8 mt-4' : 'flex-row justify-start h-full items-start')}>
             {fieldType.map(field => {
                 const config = FIELD_CONFIG[field];
                 return config.renderField({

@@ -3,8 +3,8 @@ import { AuthResponseBuilder } from "@/lib/response-builder";
 import { handleAuthError } from "@/lib/error-handler";
 import { db } from "@/lib/db/prisma";
 import { sendSMSMobile } from "@/helper/auth-helper";
-import { FlowType, ScreenType, FieldType, EventType } from "@/types";
-import { createResponseData, findEnumKey } from "@/lib/utils";
+import { EventType, FieldType, FlowType, ScreenType } from "@/types";
+import { createResponseData, findEnumKey, getPhoneVerificationStep } from "@/lib/utils";
 import { redisService } from "@/lib/db/redis";
 
 

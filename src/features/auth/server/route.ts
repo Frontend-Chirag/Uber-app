@@ -11,21 +11,22 @@ import { Session } from '@/types';
 const app = new Hono()
   .post('/submit', zValidator('json', AuthSchema), async (c) => {
 
+    const role = c.req.header('X-Role-Status') as "Rider" | "Driver";
+
     const { flowType, screenAnswers: { eventType, screenType, fieldAnswers }, inAuthSessionID } = c.req.valid('json');
 
-    
     let session: Session;
 
     if (!inAuthSessionID) {
       const sessionId = uuid();
-      session = await redisService.createFormSession({ sessionId, data: null });
-      console.log('new session', session);
+      session = await redisService.createFormSession({ sessionId, data: { type: role, flowState: flowType } });
     } else {
       session = await redisService.getFormSession(inAuthSessionID);
-      console.log('session', session);
     }
 
-    const data = await authHandler.handle(flowType, screenType, eventType, { fieldAnswers, session })
+    console.log('session', session);
+
+    const data = await authHandler.handle(flowType, screenType, eventType, { fieldAnswers, session, c })
 
     return c.json(data)
   });

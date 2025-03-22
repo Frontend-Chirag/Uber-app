@@ -73,6 +73,7 @@ const authHandler: AuthHandlerType = {
 };
 
 
+
 export {
     handleEmailVerification,
     handlePhoneVerification,
@@ -80,5 +81,5 @@ export {
     handleVerifyPhoneOtp,
     handleInputDetails,
     handleCreateAccount,
-    authHandler
+    authHandler,
 }

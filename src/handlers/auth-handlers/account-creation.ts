@@ -3,9 +3,11 @@ import { AuthResponseBuilder } from "@/lib/response-builder";
 import { handleAuthError, AuthError } from "@/lib/error-handler";
 import { AUTH_ERRORS, AUTH_SUCCESS } from "@/lib/constants";
 import { db } from "@/lib/db/prisma";
+import { setCookie } from 'hono/cookie';
+import { generateAccessToken, generateRefreshToken } from "@/lib/utils";
 
 
-export async function handleCreateAccount({ session }: HandleProps) {
+export async function handleCreateAccount({ session, c }: HandleProps) {
     try {
         const { data } = session;
 
@@ -23,12 +25,33 @@ export async function handleCreateAccount({ session }: HandleProps) {
         };
 
         const user = await db.user.create({ data: userData });
-        const userWithType = { ...user, type: user.role };
+
+        const { accessToken } = generateAccessToken({ id: user.id, contact: user.email ?? user.phonenumber!, name: user.firstname });
+        const { refreshToken } = generateRefreshToken({ id: user.id, contact: user.email ?? user.phonenumber!, name: user.firstname });
+
+        const updatedUser = await db.user.update({
+            where: { id: user.id },
+            data: { refreshToken },
+        });
+
+        setCookie(c, 'accessToken', accessToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'Strict',
+            path: '/'
+        });
+        
+        setCookie(c, 'refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'Strict',
+            path: '/'
+        });
 
         return new AuthResponseBuilder()
             .setStatus(200)
             .setSuccess(AUTH_SUCCESS.ACCOUNT_CREATED)
-            .setUser(userWithType)
+            .setUser(updatedUser)
             .build();
 
     } catch (error) {

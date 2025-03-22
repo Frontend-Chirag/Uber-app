@@ -11,10 +11,10 @@ class RedisService {
     private constructor() {
         this.client = createClient({
             username: 'default',
-            password: '1PDiRy73cHrscPMZlIBONcVL9l8SwIId',
+            password: 'Y1dKpNwyTi2V40nt2PZNEZyWNqgTGrDx',
             socket: {
-                host: 'redis-15696.c305.ap-south-1-1.ec2.redns.redis-cloud.com',
-                port: 15696,
+                host: 'redis-15984.c91.us-east-1-3.ec2.redns.redis-cloud.com',
+                port: 15984,
                 reconnectStrategy: (retries: number) => {
                     if (retries > this.maxRetries) {
                         return new Error('Max reconnection attempts exceeded');
@@ -47,8 +47,15 @@ class RedisService {
     }
 
     public async connect(): Promise<void> {
-        if (!this.isConnected) {
+        if (this.isConnected) {
+            console.log('Already connected to Redis');
+            return;
+        }
+        try {
             await this.client.connect();
+            this.isConnected = true; // ✅ Set connected flag
+        } catch (error) {
+            console.error('Redis connection failed:', error);
         }
     }
 

@@ -6,7 +6,7 @@ import { db } from "@/lib/db/prisma";
 import { redisService } from "@/lib/db/redis";
 import { FlowType } from "@/types";
 
-import {getNextStep} from './next-step';
+import { getNextStep } from '@/lib/utils';
 
 export async function handleVerifyEmailOtp({ session, fieldAnswers }: HandleProps) {
     try {
@@ -15,7 +15,7 @@ export async function handleVerifyEmailOtp({ session, fieldAnswers }: HandleProp
 
         const otpCode = fieldAnswers[0].emailOTPCode;
 
-        if (data?.otp.value !== otpCode) {
+        if (data?.otp?.value !== otpCode) {
             throw new AuthError(AUTH_ERRORS.INVALID_EMAIL_OTP);
         }
 
@@ -28,12 +28,10 @@ export async function handleVerifyEmailOtp({ session, fieldAnswers }: HandleProp
                 throw new AuthError(AUTH_ERRORS.USER_NOT_FOUND);
             }
 
-            const userWithType = { ...user, type: user.role };
-
             return new AuthResponseBuilder()
                 .setStatus(200)
                 .setSuccess(AUTH_SUCCESS.LOGIN)
-                .setUser(userWithType)
+                .setUser(user)
                 .build();
         }
 
@@ -58,7 +56,7 @@ export async function handleVerifyPhoneOtp({ session, fieldAnswers }: HandleProp
         const { data, sessionId } = session;
         const otpCode = fieldAnswers[0].phoneOTPCode!;
 
-        if (data?.otp.value !== otpCode) {
+        if (data?.otp?.value !== otpCode) {
             throw new AuthError(AUTH_ERRORS.INVALID_PHONE_OTP);
         }
 
@@ -74,12 +72,10 @@ export async function handleVerifyPhoneOtp({ session, fieldAnswers }: HandleProp
                 throw new AuthError(AUTH_ERRORS.USER_NOT_FOUND);
             }
 
-            const userWithType = { ...user, type: user.role };
-
             return new AuthResponseBuilder()
                 .setStatus(200)
                 .setSuccess(AUTH_SUCCESS.LOGIN)
-                .setUser(userWithType)
+                .setUser(user)
                 .build();
         }
 

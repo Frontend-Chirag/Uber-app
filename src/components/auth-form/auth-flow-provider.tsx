@@ -2,8 +2,9 @@
 
 import { findEnumKey } from '@/lib/utils';
 import { EventType, FieldType, FlowType, ScreenType } from '@/types';
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { ScreenLoader } from '../screen-loader';
 
 interface AuthFlowState {
     screenType: ScreenType;
@@ -28,7 +29,7 @@ interface AuthFlowContextProps extends AuthFlowState {
         screenAnswers: {
             screenType: ScreenType;
             eventType: EventType;
-            fieldAnswers: Array<{ fieldType: string; [key: string]: string }>;
+            fieldAnswers: Array<{ fieldType: string;[key: string]: string }>;
         };
         inAuthSessionID: string;
     };
@@ -59,6 +60,10 @@ export const AuthFlowProvider = ({ children }: { children: ReactNode }) => {
         setIsLoadingNextScreen: (isLoadingNextScreen: boolean) => setState(prev => ({ ...prev, isLoadingNextScreen })),
     }), []);
 
+    useEffect(() => {
+        console.log(state)
+    }, [state])
+
     const createFormData = useCallback((data: Record<FieldType, string>) => {
         return {
             flowType: state.flowType,
@@ -82,7 +87,11 @@ export const AuthFlowProvider = ({ children }: { children: ReactNode }) => {
 
     return (
         <AuthFlowContext.Provider value={contextValue}>
-            {children}
+            {state.isLoadingNextScreen ? (
+                <ScreenLoader />
+            ) : (
+                children
+            )}
         </AuthFlowContext.Provider>
     );
 };

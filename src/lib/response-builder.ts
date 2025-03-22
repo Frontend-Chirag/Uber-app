@@ -35,8 +35,8 @@ export class AuthResponseBuilder {
         return this;
     }
 
-    setForm(form: ResponseDataReturnProps) {
-        this.response.form = form;
+    setForm(nextStep: ResponseDataReturnProps) {
+        this.response.form = nextStep;
         return this;
     }
 

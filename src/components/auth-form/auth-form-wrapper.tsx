@@ -75,17 +75,6 @@ export const TitleContainer = () => {
         return getTitle(hintValue);
     }, [screenType, hintValue]);
 
-    // Render the title with wrapper if needed
-    // if (titleConfig.wrapper) {
-    //     return (
-    //         <div className="flex gap-x-4">
-    //             <h1 className={titleConfig.className}>
-    //                 {titleConfig.title}
-    //             </h1>
-    //         </div>
-    //     );
-    // }
-
     return (
         <h1 className={titleConfig.className}>
             {titleConfig.title}
@@ -113,7 +102,7 @@ export const AuthFormWrapper = ({ children }: AuthWrapper) => {
     }, [isInitial]);
 
     return (
-        <div className="mx-auto flex flex-col gap-y-4 w-full sm:w-[370px] px-4 sm:px-0">
+        <div className="mx-auto flex flex-col gap-y-3 w-full sm:w-[370px] px-4 sm:px-0">
             <div className='flex flex-col gap-y-8 mt-6'>
                 <TitleContainer />
             </div>
