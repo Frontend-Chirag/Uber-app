@@ -17,13 +17,13 @@ export async function handleEmailVerification({ session, fieldAnswers }: HandleP
             where: { email }
         });
 
-        const flowState = existingUser ? FlowType.LOGIN : FlowType.SIGN_UP;
+        const eventType = existingUser ? EventType.TypeInputExistingEmail : EventType.TypeEmailOTP;
         const otp = await sendOTPEmail({ email });
 
         const newSession = await redisService.updateFormSession(session.sessionId, {
             otp,
             email,
-            flowState,
+            flowState: FlowType.SIGN_UP,
         });
 
         return new AuthResponseBuilder()
@@ -36,12 +36,83 @@ export async function handleEmailVerification({ session, fieldAnswers }: HandleP
                     fieldType: findEnumKey(FieldType.EMAIL_OTP_CODE)!,
                     hintValue: newSession.email!,
                     otpWidth: otp.value.length,
+                    profileHint: {
+                        firstname: existingUser?.firstname || '',
+                        lastname: existingUser?.lastname || '',
+                        phonenumber: existingUser?.phonenumber || '',
+                        email: existingUser?.email || '',
+                    }
                 }],
-                eventType: EventType.TypeEmailOTP
+                eventType
             }))
             .build();
 
     } catch (error) {
         return handleAuthError(error);
     }
-} 
+}
+
+
+// {
+//     "form": {
+//         "flowType": "SIGN_IN",
+//             "screens": [
+//                 {
+//                     "screenType": "EMAIL_OTP_CODE",
+//                     "fields": [
+//                         {
+//                             "fieldType": "EMAIL_OTP_CODE",
+//                             "hintValue": "anujkashyap123000@gmail.com",
+//                             "otpWidth": 4,
+//                             "profileHint": {
+//                                 "firstName": "chirag",
+//                                 "lastName": "",
+//                                 "phoneNumber": "",
+//                                 "email": ""
+//                             },
+//                             "selectAccountHints": null,
+//                             "allowCredentials": null
+//                         }
+//                     ],
+//                     "eventType": "TypeEmailOTP",
+//                     "categoryType": "LOGIN_OPTION"
+//                 }
+//             ]
+//     },
+//     "inAuthSessionID": "c4916c9f-b460-44d7-bb53-7afce2958b0a_18b28af0-02e4-4867-9e53-a64ff40507dd",
+//         "alternateForms": [
+//             {
+//                 "flowType": "INITIAL",
+//                 "screens": [
+//                     {
+//                         "screenType": "PHONE_OTP",
+//                         "fields": [
+//                             {
+//                                 "fieldType": "PHONE_SMS_OTP",
+//                                 "hintValue": "******8489",
+//                                 "otpWidth": 4,
+//                                 "selectAccountHints": null,
+//                                 "allowCredentials": null
+//                             }
+//                         ], "eventType": "TypeSMSOTP",
+//                         "categoryType": "LOGIN_OPTION"
+//                     }
+//                 ]
+//             }, {
+//                 "flowType": "INITIAL",
+//                 "screens": [
+//                     {
+//                         "screenType": "EMAIL",
+//                         "fields": [{
+//                             "fieldType": "EMAIL_ADDRESS",
+//                             "selectAccountHints": null,
+//                             "allowCredentials": null
+//                         }
+//                         ],
+//                         "eventType": "TypeInputExistingEmail"
+//                     }]
+//             }
+//         ],
+
+//             "cookies": null
+// }

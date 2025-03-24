@@ -8,11 +8,12 @@ import React, { useMemo } from 'react';
 // Add these types at the top
 type TitleConfig = {
     title: string;
+    title2: string;
     className: string;
     wrapper?: boolean;
 };
 
-type TitleFunction = (hintValue: string) => TitleConfig;
+type TitleFunction = (hintValue: string, firstname: string ) => TitleConfig;
 
 type ScreenTitlesConfig = {
     [K in ScreenType | ScreenType.PHONE_NUMBER_INITIAL]: TitleFunction;
@@ -24,8 +25,9 @@ interface AuthWrapper {
 
 // Define screen title configurations
 const SCREEN_TITLES: ScreenTitlesConfig = {
-    [ScreenType.EMAIL_OTP_CODE]: (hintValue: string) => ({
-        title: `Enter the 4-digit code sent to: ${hintValue}`,
+    [ScreenType.EMAIL_OTP_CODE]: (hintValue: string, firstname: string) => ({
+        title: firstname !== '' ? `Welcome back, ${firstname}` : `Enter the 4-digit code sent to: ${hintValue}`,
+         title2: ` `
         className: "text-2xl font-Rubik-SemiBold"
     }),
 
@@ -54,8 +56,8 @@ const SCREEN_TITLES: ScreenTitlesConfig = {
         className: "text-2xl font-Rubik-SemiBold",
         wrapper: true
     }),
-    [ScreenType.PHONE_NUMBER_INITIAL]:  () => ({
-          title: "What's your phone number or email?",
+    [ScreenType.PHONE_NUMBER_INITIAL]: () => ({
+        title: "What's your phone number or email?",
         className: "text-2xl font-Rubik-SemiBold"
     }),
     [ScreenType.EMAIL_ADDRESS]: function (hintValue: string): TitleConfig {
@@ -64,15 +66,15 @@ const SCREEN_TITLES: ScreenTitlesConfig = {
     [ScreenType.RESET_ACCOUNT]: function (hintValue: string): TitleConfig {
         throw new Error('Function not implemented.');
     }
-} ;
+};
 
 export const TitleContainer = () => {
-    const { screenType, hintValue } = useAuthFlow();
+    const { screenType, hintValue, profileHint } = useAuthFlow();
 
     // Memoize the title configuration
     const titleConfig = useMemo(() => {
-        const getTitle = SCREEN_TITLES[screenType] ;
-        return getTitle(hintValue);
+        const getTitle = SCREEN_TITLES[screenType];
+        return getTitle(hintValue, profileHint.firstname);
     }, [screenType, hintValue]);
 
     return (

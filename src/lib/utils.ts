@@ -1,7 +1,7 @@
-import { FieldType, HandleResponseDataProps, ResponseDataReturnProps,FlowType, ScreenType,EventType } from "@/types";
+import { FieldType, HandleResponseDataProps, ResponseDataReturnProps, FlowType, ScreenType, EventType } from "@/types";
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import { sessionData } from "@/types";
 
 
@@ -33,11 +33,11 @@ export const findEnumKey = (value: string): keyof typeof FieldType | undefined =
 
 export const getNextStep = (session: sessionData, sessionId: string) => {
   if (session.emailVerified && session.phoneVerified) {
-      return getDetailsStep(sessionId);
+    return getDetailsStep(sessionId);
   }
 
   if (!session.emailVerified) {
-      return getEmailVerificationStep(sessionId, session);
+    return getEmailVerificationStep(sessionId, session);
   }
 
   return getPhoneVerificationStep(sessionId, session);
@@ -45,45 +45,45 @@ export const getNextStep = (session: sessionData, sessionId: string) => {
 
 export const getDetailsStep = (sessionId: string) => {
   return createResponseData({
-      flowType: FlowType.PROGRESSIVE_SIGN_UP,
-      screenType: ScreenType.FIRST_NAME_LAST_NAME,
-      fields: [
-          { fieldType: findEnumKey(FieldType.FIRST_NAME)! },
-          { fieldType: findEnumKey(FieldType.LAST_NAME)! },
-      ],
-      eventType: EventType.TypeInputDetails,
-      sessionId
+    flowType: FlowType.PROGRESSIVE_SIGN_UP,
+    screenType: ScreenType.FIRST_NAME_LAST_NAME,
+    fields: [
+      { fieldType: findEnumKey(FieldType.FIRST_NAME)! },
+      { fieldType: findEnumKey(FieldType.LAST_NAME)! },
+    ],
+    eventType: EventType.TypeInputDetails,
+    sessionId
   });
 };
 
 export const getEmailVerificationStep = (sessionId: string, session: sessionData) => {
   return createResponseData({
-      flowType: FlowType.PROGRESSIVE_SIGN_UP,
-      screenType: ScreenType.EMAIL_ADDRESS_PROGESSIVE,
-      fields: [
-          {
-              fieldType: findEnumKey(FieldType.EMAIL_ADDRESS)!,
-              hintValue: session.email!,
-              otpWidth: session.otp?.value?.length
-          }
-      ],
-      eventType: EventType.TypeInputEmail,
-      sessionId
+    flowType: FlowType.PROGRESSIVE_SIGN_UP,
+    screenType: ScreenType.EMAIL_ADDRESS_PROGESSIVE,
+    fields: [
+      {
+        fieldType: findEnumKey(FieldType.EMAIL_ADDRESS)!,
+        hintValue: session.email!,
+        otpWidth: session.otp?.value?.length
+      }
+    ],
+    eventType: EventType.TypeInputEmail,
+    sessionId
   });
 };
 
 export const getPhoneVerificationStep = (sessionId: string, session: sessionData) => {
   return createResponseData({
-      flowType: FlowType.PROGRESSIVE_SIGN_UP,
-      screenType: ScreenType.PHONE_NUMBER_PROGRESSIVE,
-      fields: [
-          { fieldType: findEnumKey(FieldType.PHONE_COUNTRY_CODE)!, hintValue: session.phoneCountryCode! },
-          { fieldType: findEnumKey(FieldType.PHONE_NUMBER)!, hintValue: session.phonenumber!, otpWidth: session.otp?.value?.length },
-      ],
-      eventType: EventType.TypeInputMobile,
-      sessionId
+    flowType: FlowType.PROGRESSIVE_SIGN_UP,
+    screenType: ScreenType.PHONE_NUMBER_PROGRESSIVE,
+    fields: [
+      { fieldType: findEnumKey(FieldType.PHONE_COUNTRY_CODE)!, hintValue: session.phoneCountryCode! },
+      { fieldType: findEnumKey(FieldType.PHONE_NUMBER)!, hintValue: session.phonenumber!, otpWidth: session.otp?.value?.length },
+    ],
+    eventType: EventType.TypeInputMobile,
+    sessionId
   });
-}; 
+};
 
 
 interface Data {
@@ -106,4 +106,23 @@ export const generateAccessToken = ({ id, contact, name }: Data) => {
 };
 
 
- 
+export const verifyToken = (token: string, secret: string): JwtPayload | null => {
+  try {
+      const decoded = jwt.verify(token, secret) as JwtPayload;
+      const now = Math.floor(Date.now() / 1000);
+
+      // Check expiration
+      if (decoded.exp && decoded.exp < now) {
+          console.warn('Token has expired');
+          return null;
+      }
+
+      return decoded;
+  } catch (error) {
+      console.error("Token verification failed:", error);
+      return null;
+  }
+};
+
+
+

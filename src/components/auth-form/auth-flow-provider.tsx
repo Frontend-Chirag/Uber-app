@@ -14,6 +14,12 @@ interface AuthFlowState {
     inAuthSessionID: string;
     hintValue: string;
     isLoadingNextScreen: boolean;
+    profileHint: {
+        firstname: string;
+        lastname: string;
+        email: string;
+        phonenumber: string;
+    }
 }
 
 interface AuthFlowContextProps extends AuthFlowState {
@@ -45,6 +51,12 @@ const initialState: AuthFlowState = {
     inAuthSessionID: '',
     hintValue: '',
     isLoadingNextScreen: false,
+    profileHint: {
+        firstname: '',
+        lastname: '',
+        email: '',
+        phonenumber: ''
+    }
 };
 
 export const AuthFlowProvider = ({ children }: { children: ReactNode }) => {
@@ -58,11 +70,14 @@ export const AuthFlowProvider = ({ children }: { children: ReactNode }) => {
         setInAuthSessionID: (inAuthSessionID: string) => setState(prev => ({ ...prev, inAuthSessionID })),
         setHintValue: (hintValue: string) => setState(prev => ({ ...prev, hintValue })),
         setIsLoadingNextScreen: (isLoadingNextScreen: boolean) => setState(prev => ({ ...prev, isLoadingNextScreen })),
+        setProfiileHint: (profileHint: {
+            firstname: string;
+            lastname: string;
+            email: string;
+            phonenumber: string;
+        }) => setState(prev => ({ ...prev, profileHint }))
     }), []);
 
-    useEffect(() => {
-        console.log(state)
-    }, [state])
 
     const createFormData = useCallback((data: Record<FieldType, string>) => {
         return {

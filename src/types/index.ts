@@ -21,6 +21,8 @@ export enum ScreenType {
 
 export enum EventType {
     TypeInputEmail = 'TypeInputEmail',
+    TypeInputExistingEmail= 'TypeInputExistingEmail',
+    TypeInputExistingPhone= 'TypeInputExistingPhone',
     TypeInputMobile = 'TypeInputMobile',
     TypeSMSOTP = 'TypeSMSOTP',
     TypeResetAccount = 'TypeResetAccount',
@@ -65,6 +67,12 @@ export interface Session {
 interface Fields {
     fieldType: string;
     hintValue?: string;
+    profileHint?: {
+       firstname: string,
+       lastname: string,
+       phonenumber: string,
+       email:string
+    };
     otpWidth?: number;
 };
 
