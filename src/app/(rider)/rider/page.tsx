@@ -1,10 +1,8 @@
 import React from 'react'
 
-const Rider = async () => {
+export const Rider = () => {
 
-    return (
-        <div>Rider</div>        
-    )
+  return (
+    <div>Rider</div>
+  )
 }
-
-export default Rider;

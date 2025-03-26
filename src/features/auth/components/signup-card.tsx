@@ -1,6 +1,6 @@
 import React from 'react'
-import { AuthFormLayout } from '../../../components/auth-form/auth-form-layout'
-import { AuthFlowProvider } from '@/components/auth-form/auth-flow-provider'
+import { AuthFormLayout } from '../../../components/auth/auth-form-layout'
+import { AuthFlowProvider } from '@/components/auth/auth-flow-provider'
 
 export const SignupCard = () => {
   return (

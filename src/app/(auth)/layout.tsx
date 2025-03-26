@@ -1,5 +1,5 @@
 
-import { Navbar } from '@/components/navbar/nav-bar';
+import { Navbar } from '@/components/shared/navbar/nav-bar';
 import React from 'react'
 
 interface AuthLayoutProps {

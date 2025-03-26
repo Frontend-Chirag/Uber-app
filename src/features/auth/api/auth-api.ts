@@ -1,6 +1,6 @@
 
 import { InferRequestType, InferResponseType } from 'hono';
-import { honoClient } from '@/lib/rpc';
+import { honoClient } from '@/lib/api/rpc';
 import { useMutation } from '@tanstack/react-query';
 
 type RequestType = InferRequestType<typeof honoClient.api.auth.submit['$post']>

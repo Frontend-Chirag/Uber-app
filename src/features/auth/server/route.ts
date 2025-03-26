@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { authHandler } from '@/handlers/auth-handlers/index';
 import { AuthSchema } from '@/validators/validate-server';
 import { redisService } from '../../../lib/db/redis';
 import { v4 as uuid } from 'uuid';
 import { Session } from '@/types';
+import { authHandler } from '@/actions/auth/auth';
 
 
 
@@ -19,14 +19,14 @@ const app = new Hono()
 
     if (!inAuthSessionID) {
       const sessionId = uuid();
-      session = await redisService.createFormSession({ sessionId, data: { type: role, flowState: flowType } });
+      session = await redisService.createFormSession({ sessionId, data: { type: role, flowType, eventType } });
     } else {
       session = await redisService.getFormSession(inAuthSessionID);
     }
 
     console.log('session', session);
 
-    const data = await authHandler.handle(flowType, screenType, eventType, { fieldAnswers, session, c })
+    const data = await authHandler.handle(flowType, screenType, eventType, { fieldAnswers, session })
 
     return c.json(data)
   });

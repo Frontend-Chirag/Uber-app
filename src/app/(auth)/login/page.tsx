@@ -1,8 +1,7 @@
+import { LoginCard } from "@/features/auth/components/login-card";
 
 const LoginPage = () => {
-    return(
-        <div>LoginPage</div>
-    )
+    return <LoginCard />
 };
 
 export default LoginPage;

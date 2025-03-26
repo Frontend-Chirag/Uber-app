@@ -48,14 +48,15 @@ export interface sessionData {
     phoneCountryCode?: string | null;
     emailVerified?: boolean;
     phoneVerified?: boolean;
-    flowState: FlowType;
+    flowType: FlowType;
     firstname?: string | null;
     lastname?: string | null;
     otp?: {
         value: string | null;
         expiresAt: number | null;
     };
-    type: 'Driver' | 'Rider' | null
+    type: 'Driver' | 'Rider' | null;
+    eventType: EventType
 }
 
 export interface Session {

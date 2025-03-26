@@ -1,4 +1,5 @@
 import { FlowType, sessionData } from '@/types';
+import { AuthSession } from '@/types/auth';
 import { createClient, RedisClientType } from 'redis';
 
 class RedisService {
@@ -75,7 +76,7 @@ class RedisService {
         }
     }
 
-    public async createFormSession({ sessionId, data }: CreateSessionProps): Promise<CreateSessionProps> {
+    public async createFormSession({ sessionId, data }: AuthSession): Promise<AuthSession> {
         await this.ensureConnection();
 
         const session: sessionData = {
@@ -84,11 +85,12 @@ class RedisService {
             phoneCountryCode: data?.phoneCountryCode ?? null,
             emailVerified: data?.emailVerified ?? false,
             phoneVerified: data?.phoneVerified ?? false,
-            flowState: data?.flowState ?? FlowType.INITIAL,
+            flowType: data?.flowType ?? FlowType.INITIAL,
             firstname: data?.firstname ?? null,
             lastname: data?.lastname ?? null,
             otp: data?.otp ?? { value: null, expiresAt: null },
-            type: data?.type ?? null
+            type: data?.type ?? null,
+            eventType: data?.eventType!
         };
 
         try {

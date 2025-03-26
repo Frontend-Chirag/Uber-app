@@ -1,7 +1,7 @@
-import { AuthOptions } from "@/components/navbar/auth-options";
-import { Navbar } from "@/components/navbar/nav-bar";
-import { NavLinks } from "@/components/navbar/nav-links";
-import { Publiclinks } from "@/lib/constants";
+import { AuthOptions } from "@/components/shared/navbar/auth-options";
+import { Navbar } from "@/components/shared/navbar/nav-bar";
+import { NavLinks } from "@/components/shared/navbar/nav-links";
+import { Publiclinks } from "@/lib/config/constants";
 
 
 export default function Home() {

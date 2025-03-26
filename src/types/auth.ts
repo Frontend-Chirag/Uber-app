@@ -1,22 +1,43 @@
 import { z } from "zod";
 import { User } from "./user";
-import { FieldType, ResponseDataReturnProps, Session } from "@/types";
+import { ResponseDataReturnProps, Session, FlowType, ScreenType, EventType, sessionData } from "@/types";
 import { AuthSchema } from "@/validators/validate-server";
-import { Context } from 'hono';
 
+export type UserRole = 'Rider' | 'Driver';
 
-export interface AuthResponse {
-    status: number;
-    error?: string;
-    success?: string;
-    user?: User;
-    form?: ResponseDataReturnProps;
+// Use Zod schema for field answers
+export type FieldAnswers = z.infer<typeof AuthSchema>['screenAnswers']['fieldAnswers'][number];
+
+export interface AuthSession {
+  sessionId: string;
+  data: sessionData | null;
 }
 
-type FieldAnswers = z.infer<typeof AuthSchema>['screenAnswers']['fieldAnswers'][number]
+export interface AuthRequest {
+  flowType: FlowType;
+  screenType: ScreenType;
+  eventType: EventType;
+  fieldAnswers: FieldAnswers[];
+  inAuthSessionID?: string;
+}
+
+export interface AuthResponse {
+  status: number;
+  success: boolean;
+  error?: string;
+  data?: {
+    sessionId?: string;
+    user?: User;
+    form?: ResponseDataReturnProps;
+  };
+}
+
+export interface AuthError {
+  message: string;
+  code: string;
+}
 
 export interface HandleProps {
-    session: Session;
-    fieldAnswers: FieldAnswers[];
-    c: Context
+  session: Session;
+  fieldAnswers: FieldAnswers[];
 } 

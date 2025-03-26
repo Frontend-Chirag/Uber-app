@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { InputOTPSlot, InputOTPGroup, InputOTP } from "@/components/ui/input-otp";
 import { Checkbox } from "@/components/ui/checkbox";
-import { phoneCountryCodes } from "@/lib/constants";
+import { phoneCountryCodes } from "@/lib/config/constants";
 import { memo, JSX } from "react";
 import { ChangeEvent } from "react";
 import { FormField, FormItem, FormControl, FormLabel, FormMessage } from "@/components/ui/form";
