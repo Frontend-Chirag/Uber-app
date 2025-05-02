@@ -5,14 +5,16 @@ import { ArrowRightIcon } from 'lucide-react';
 import { FaTimes } from 'react-icons/fa';
 import React from 'react';
 
-import { cn } from '@/lib/utils/utils';
+import { cn } from '@/lib/utils';
 
 import { Drawer, DrawerClose, DrawerContent, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
+import { Role } from '@prisma/client';
+
 
 
 interface AuthOptionsProps {
-    Options: { name: string; type: 'Rider' | 'Driver' }[];
+    Options: { name: string; type: Role }[];
     path: string;
     name: string;
     className?: string;

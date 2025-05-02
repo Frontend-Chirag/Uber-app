@@ -3,6 +3,12 @@ import * as z from 'zod';
 
 export const FieldValidationSchema = {
     [FieldType.PHONE_COUNTRY_CODE]: z.string().min(1, "Select a country code"),
+    [FieldType.PASSWORD]: z.string().min(8, 'Password must be at least 8 characters')
+        .max(100, 'Password is too long')
+        .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+        .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+        .regex(/[0-9]/, 'Password must contain at least one number')
+        .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
     [FieldType.PHONE_NUMBER]: z.string().regex(/^\d{10,15}$/, "Phone number must be between 10 to 15 digits"),
     [FieldType.PHONE_SMS_OTP]: z.string().regex(/^\d+$/, "Phone number must be numeric"),
     [FieldType.EMAIL_ADDRESS]: z.string().email("Invalid email address"),

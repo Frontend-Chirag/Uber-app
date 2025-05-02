@@ -6,7 +6,7 @@ import { FieldValidationSchema } from "./validate-client";
 // Zod Schema for Authentication Payload
 export const AuthSchema = z.object({
     flowType: z.nativeEnum(FlowType),
-    inAuthSessionID: z.string().nullable(),
+    inAuthSessionId: z.string(),
     screenAnswers: z.object({
         screenType: z.nativeEnum(ScreenType),
         eventType: z.nativeEnum(EventType),

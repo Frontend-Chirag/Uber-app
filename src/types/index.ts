@@ -1,3 +1,4 @@
+
 export enum FlowType {
     INITIAL = 'INITIAL', // for initally submit form
     SIGN_UP = 'SIGN_UP', // to verify email or phone number via otp
@@ -12,17 +13,18 @@ export enum ScreenType {
     PHONE_OTP = 'PHONE_OTP',
     EMAIL_OTP_CODE = 'EMAIL_OTP_CODE',
     PHONE_NUMBER_PROGRESSIVE = 'PHONE_NUMBER_PROGRESSIVE',
-    EMAIL_ADDRESS_PROGESSIVE = 'EMAIL_ADDRESS_PROGESSIVE',
+    EMAIL_ADDRESS_PROGESSIVE = 'EMAIL_ADDRESS_PROGRESSIVE',
     FIRST_NAME_LAST_NAME = 'FIRST_NAME_LAST_NAME',
     RESET_ACCOUNT = 'RESET_ACCOUNT',
-    AGREE_TERMS_AND_CONDITIONS = 'AGREE_TERMS_AND_CONDITIONS'
+    AGREE_TERMS_AND_CONDITIONS = 'AGREE_TERMS_AND_CONDITIONS',
+    RESEND_OTP = 'RESEND_OTP'
 }
 
 
 export enum EventType {
     TypeInputEmail = 'TypeInputEmail',
-    TypeInputExistingEmail= 'TypeInputExistingEmail',
-    TypeInputExistingPhone= 'TypeInputExistingPhone',
+    TypeInputExistingEmail = 'TypeInputExistingEmail',
+    TypeInputExistingPhone = 'TypeInputExistingPhone',
     TypeInputMobile = 'TypeInputMobile',
     TypeSMSOTP = 'TypeSMSOTP',
     TypeResetAccount = 'TypeResetAccount',
@@ -37,83 +39,12 @@ export enum FieldType {
     PHONE_SMS_OTP = 'phoneOTPCode',
     EMAIL_ADDRESS = 'emailAddress',
     EMAIL_OTP_CODE = 'emailOTPCode',
+    PASSWORD = 'password',
     FIRST_NAME = 'firstName',
     LAST_NAME = 'lastName',
     AGREE_TERMS_AND_CONDITIONS = 'termsAndconditions'
 }
 
-export interface sessionData {
-    email?: string | null;
-    phonenumber?: string | null;
-    phoneCountryCode?: string | null;
-    emailVerified?: boolean;
-    phoneVerified?: boolean;
-    flowType: FlowType;
-    firstname?: string | null;
-    lastname?: string | null;
-    otp?: {
-        value: string | null;
-        expiresAt: number | null;
-    };
-    type: 'Driver' | 'Rider' | null;
-    eventType: EventType
-}
-
-export interface Session {
-    sessionId: string;
-    data: sessionData | null;
-}
-
-
-interface Fields {
-    fieldType: string;
-    hintValue?: string;
-    profileHint?: {
-       firstname: string,
-       lastname: string,
-       phonenumber: string,
-       email:string
-    };
-    otpWidth?: number;
-};
-
-interface Screens {
-    screenType: ScreenType;
-    fields: Fields[];
-    eventType: EventType; 
-};
-
-interface NextStep {
-    flowType: FlowType;
-    screens: Screens
-};
-
-export interface ResponseDataReturnProps {
-    nextStep: NextStep;
-    inAuthSessionID: string
-};
-
-
-
-export interface HandleResponseDataProps {
-    flowType: FlowType;
-    screenType: ScreenType;
-    fields: Fields[];
-    eventType: EventType;
-    sessionId: string;
-};
-
-export interface User {
-    id: string;
-    firstname: string;
-    lastname: string;
-    email: string | null;
-    phoneCountryCode: string | null;
-    phonenumber: string | null;
-    type: 'Driver' | 'Rider';
-    createdAt: Date;
-    updatedAt: Date;
-} 
 
 export interface Links {
     name: string;

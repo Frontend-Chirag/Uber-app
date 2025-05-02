@@ -1,10 +1,12 @@
 import { AuthOptions } from "@/components/shared/navbar/auth-options";
 import { Navbar } from "@/components/shared/navbar/nav-bar";
 import { NavLinks } from "@/components/shared/navbar/nav-links";
-import { Publiclinks } from "@/lib/config/constants";
+import { Publiclinks } from "@/lib/constants";
 
 
-export default function Home() {
+
+export default async function Home() {
+
   return (
     <main className="w-full h-full bg-neutral-100">
       <Navbar
@@ -18,18 +20,19 @@ export default function Home() {
 
         <div className='flex justify-start items-center gap-x-4 '>
           <AuthOptions
-            Options={[{ name: 'Sign in to drive & deliver', type: 'Driver' }, { name: 'Sign in ride', type: 'Rider' },]}
+            Options={[{ name: 'Log in to drive & deliver', type: 'driver' }, { name: 'Log in ride', type: 'rider' }]}
             path='login'
             name='Log in'
           />
           <AuthOptions
-            Options={[{ name: 'Sign in to drive & deliver', type: 'Driver' }, { name: 'Create a rider account', type: 'Rider' },]}
+            Options={[{ name: 'Sign in to drive & deliver', type: 'driver' }, { name: 'Create a rider account', type: 'rider' }]}
             path='signup'
             name='Sign up'
             className='bg-white hover:bg-white text-primary'
           />
         </div>
       </Navbar>
+
     </main>
   );
 }

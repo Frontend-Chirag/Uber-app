@@ -1,101 +1,125 @@
-import { NextResponse, NextRequest } from 'next/server';
-import { ENV } from '@/lib/config/config';
-import { db } from '@/lib/db/prisma';
-import jwt from 'jsonwebtoken';
-import { verifyToken } from './lib/auth/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "./lib/auth";
 
-// Define protected routes and their allowed roles
-const protectedRoutes = {
-  '/rider': ['Rider'],
-  '/driver': ['Driver'],
-  '/dashboard': ['Rider', 'Driver'],
-};
 
-export async function middleware(req: NextRequest) {
-  const accessToken = req.cookies.get('accessToken')?.value;
-  const refreshToken = req.cookies.get('refreshToken')?.value;
-
-  // Check if the current path requires authentication
-  const path = req.nextUrl.pathname;
-  const isProtectedRoute = Object.keys(protectedRoutes).some(route => path.startsWith(route));
-
-  if (!isProtectedRoute) {
-    return NextResponse.next();
-  }
-
-  // If no tokens are present, redirect to login
-  if (!accessToken && !refreshToken) {
-    return NextResponse.redirect(new URL('/auth/login', req.url));
-  }
-
-  try {
-    let userPayload;
-
-    // Try to verify access token first
-    if (accessToken) {
-      userPayload = await verifyToken(accessToken, ENV.ACCESS_TOKEN_SECRET);
-    }
-
-    // If access token is invalid or expired, try refresh token
-    if (!userPayload && refreshToken) {
-      userPayload = await verifyToken(refreshToken, ENV.REFRESH_TOKEN_SECRET);
-
-      if (userPayload) {
-        // Verify refresh token in database
-        const user = await db.user.findUnique({
-          where: { id: userPayload.id }
-        });
-
-        if (!user || user.refreshToken !== refreshToken) {
-          return NextResponse.redirect(new URL('/auth/login', req.url));
-        }
-
-        // Generate new access token
-        const newAccessToken = jwt.sign(
-          { id: user.id, role: user.role },
-          ENV.ACCESS_TOKEN_SECRET,
-          { expiresIn: Number(ENV.ACCESS_TOKEN_EXPIRY) }
-        );
-
-        // Set new access token in response
-        const response = NextResponse.next();
-        response.cookies.set('accessToken', newAccessToken, {
-          httpOnly: true,
-          secure: true,
-          sameSite: 'strict',
-          path: '/'
-        });
-        return response;
-      }
-    }
-
-    // If no valid tokens, redirect to login
-    if (!userPayload) {
-      return NextResponse.redirect(new URL('/auth/login', req.url));
-    }
-
-    // Check role-based access
-    const userRole = userPayload.role;
-    const matchedRoute = Object.keys(protectedRoutes).find(route => path.startsWith(route)) as keyof typeof protectedRoutes;
-    const allowedRoles = protectedRoutes[matchedRoute];
-
-    if (!allowedRoles.includes(userRole)) {
-      // Redirect to appropriate dashboard based on role
-      return NextResponse.redirect(new URL(`/${userRole.toLowerCase()}`, req.url));
-    }
-
-    return NextResponse.next();
-  } catch (error) {
-    // Handle any errors during token verification
-    return NextResponse.redirect(new URL('/auth/login', req.url));
-  }
+const securityHeaders = {
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:;"
 }
 
-// Configure which routes to run middleware on
+
+// Define protected routes and their allowed roles 
+const protectedRoutes = {
+  '/driver': ['driver'],
+  '/rider': ['rider'],
+  '/dashboard': ['driver', 'rider']
+} as const;
+
+// Type for protected routes
+type ProtectedRoute = keyof typeof protectedRoutes;
+type UserRole = 'driver' | 'rider';
+
+/**
+ * Gets the client IP address from various headers
+ * @param request The NextRequest object
+ * @returns The client IP address or 'unknown'
+ */
+
+async function getClientIp(request: NextRequest): Promise<string> {
+  let ip: string;
+
+  // Try to get the real IP from various headers
+  ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+       request.headers.get('x-real-ip') ||
+       request.headers.get('x-client-ip') ||
+       request.headers.get('cf-connecting-ip') || // Cloudflare
+       request.headers.get('true-client-ip') || // Akamai
+       (process.env.NODE_ENV === 'development' ? '127.0.0.1' : 'unknown');
+
+  // Add to headers
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-forwarded-for', ip);
+
+  // Log in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('IP Address:', ip);
+  }
+
+  return ip;
+}
+
+/**
+ * Checks if a user has access to a specific route
+ * @param pathname The current pathname
+ * @param userRole The user's role
+ * @returns boolean indicating if access is allowed
+ */
+
+function hasRouteAccess(pathname: string, userRole?: UserRole): boolean {
+  if (!userRole) return false;
+
+  return Object.entries(protectedRoutes).some(([route, roles]) => {
+    const allowedRoles = roles as readonly UserRole[];
+    return pathname.startsWith(route) && allowedRoles.includes(userRole);
+  });
+}
+
+/**
+ * Creates a response with security headers
+ * @param request The NextRequest object
+ * @returns NextResponse with security headers
+ */
+
+function createSecureResponse(_: NextRequest): NextResponse {
+  const response = NextResponse.next();
+
+  // Add security headers
+  Object.entries(securityHeaders).forEach(([key, value]) => {
+    response.headers.set(key, value);
+  });
+
+  return response;
+}
+
+
+export async function middleware(request: NextRequest) {
+  const { session } = await getServerSession();
+  const pathname = request.nextUrl.pathname;
+  const response = createSecureResponse(request);
+
+  // Add Ip and role headers;
+  const ip = await getClientIp(request);
+
+  console.log('IP ADDRESS', ip, 'IP from headers', request.headers.get('x-forwarded-for'))
+
+  if (session) {
+    response.headers.set('x-user-role', session.role);
+  }
+
+  // Handle route protection
+  if (!session && Object.keys(protectedRoutes).some(route => pathname.startsWith(route))) {
+    return NextResponse.redirect(new URL('/', request.url))
+  };
+
+  if (session && !hasRouteAccess(pathname, session.role as UserRole)) {
+    return NextResponse.redirect(new URL(`/${session.role}`, request.url))
+  };
+
+  return response;
+};
+
+
 export const config = {
   matcher: [
-    '/rider/:path*',
     '/driver/:path*',
+    '/rider/:path*',
     '/dashboard/:path*',
+    '/login',
+    '/signup',
+    '/'
   ]
-};
+}
