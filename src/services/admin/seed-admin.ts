@@ -9,7 +9,7 @@ async function main() {
     try {
 
         // Hash the default password
-        const hashedPassword = await bcryptjs.hash('admin123', 10);
+        const hashedPassword = await bcryptjs.hash('adminDash@123', 10);
 
         // create or update admin user
         const admin = await db.admin.create({

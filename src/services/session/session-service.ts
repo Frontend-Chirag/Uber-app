@@ -63,9 +63,15 @@ export class SessionManager<T> {
 
     constructor() { }
 
+    async getAllSession() {
+        return this.sessionStore;
+    }
+
     async checkRateLimit(ip: string): Promise<boolean> {
         const now = Date.now();
         const rate = this.rateLimits.get(ip);
+
+        console.log(rate)
 
         if (!rate || now - rate.lastAttempt > this.RATE_LIMIT_WINDOW) {
             this.rateLimits.set(ip, { count: 1, lastAttempt: now });
@@ -74,6 +80,7 @@ export class SessionManager<T> {
 
         rate.count++;
         rate.lastAttempt = now;
+
 
         return rate.count > this.MAX_REQUESTS_PER_WINDOW;
     }
@@ -100,7 +107,7 @@ export class SessionManager<T> {
         for (const [id, session] of this.sessionStore.entries()) {
             if (now > session.expiresAt.getTime()) {
                 this.sessionStore.delete(id);
-
+                console.log('delete session')
                 if (session.ip) {
                     const count = this.ipSessionCount.get(session.ip) || 0;
                     this.ipSessionCount.set(session.ip, Math.max(0, count - 1));
@@ -119,6 +126,7 @@ export class SessionManager<T> {
     }
 
     getSession(id: string): SessionData<T> | null {
+        console.log('all session data', this.sessionStore);
         return this.sessionStore.get(id) || null;
     }
 
@@ -127,6 +135,7 @@ export class SessionManager<T> {
         if (!session) return null;
 
         session.data = { ...session.data, ...updatedData };
+        this.sessionStore.set(id, session)
         return session;
     }
 
@@ -138,11 +147,11 @@ export class SessionManager<T> {
     isSessionExpired(sessionId: string): boolean {
         const session = this.sessionStore.get(sessionId);
         if (!session) return true; // If session doesn't exist, treat as expired
-    
+
         const now = Date.now();
         return now > session.expiresAt.getTime();
     }
-    
+
 }
 
 const registry = new Map<SessionKey, SessionManager<any>>();

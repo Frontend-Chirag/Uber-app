@@ -40,17 +40,17 @@ const DEFAULT_SUBTITLE_CLASS = "text-base font-normal mt-0.5";
 const SCREEN_CONFIGS: ScreenConfigs = {
     [Role.rider]: {
         [ScreenType.EMAIL_OTP_CODE]: {
-            title: (hintValue) => hintValue
-                ? `Welcome back, ${hintValue}`
-                : `Enter the 4-digit code sent to: ${hintValue}`,
-            subtitle: (hintValue) => `Enter the 4-digit code sent to: ${hintValue}`,
+            title: (hintValue) => hintValue.firstname
+                ? `Welcome back, ${hintValue.firstname}`
+                : `Enter the 4-digit code sent to: ${hintValue.emailorPhone}`,
+            subtitle: (hintValue) => `Enter the 4-digit code sent to your email: ${hintValue.emailorPhone}`,
             className: DEFAULT_TITLE_CLASS
         },
         [ScreenType.PHONE_OTP]: {
             title: (hintValue) => hintValue.firstname
-                ? `Welcome back, ${hintValue}`
+                ? `Welcome back, ${hintValue.firstname}`
                 : `Enter the 4-digit code sent via SMS to: ${hintValue.emailorPhone}`,
-            subtitle: (hintValue) => `Enter the 4-digit code sent to: ${hintValue.emailorPhone}`,
+            subtitle: (hintValue) => `Enter the 4-digit code sent to your your phone number: ${hintValue.emailorPhone}`,
             className: DEFAULT_TITLE_CLASS
         },
         [ScreenType.EMAIL_ADDRESS_PROGESSIVE]: {
@@ -81,7 +81,15 @@ const SCREEN_CONFIGS: ScreenConfigs = {
             title: "Admin Portal",
             subtitle: "Sign up to manage your workspace and stay in control",
             className: DEFAULT_TITLE_CLASS
-        }
+        },
+        [ScreenType.EMAIL_OTP_CODE]: {
+            title: (hintValue) => `Enter the 4-digit code sent to: ${hintValue.emailorPhone}`,
+            className: DEFAULT_TITLE_CLASS
+        },
+        [ScreenType.PHONE_OTP]: {
+            title: (hintValue) => `Enter the 4-digit code sent via SMS to: ${hintValue.emailorPhone}`,
+            className: DEFAULT_TITLE_CLASS
+        },
     }
 };
 
@@ -91,6 +99,7 @@ const getTitleConfig = (
     screenType: ScreenType,
     hintValue: { emailorPhone: string, firstname?: string }
 ): TitleConfig | null => {
+    console.log(role, screenType)
     const config = SCREEN_CONFIGS[role][screenType];
     if (!config) return null;
 
@@ -114,7 +123,7 @@ const getTitleConfig = (
 
 // ===== COMPONENTS =====
 const TitleContainer = () => {
-    const { screenType, hintValue, eventType, role } = useAuthFlow();
+    const { screenType, hintValue, eventType, role} = useAuthFlow();
 
     const isExistingUser = eventType === EventType.TypeInputExistingEmail ||
         eventType === EventType.TypeInputExistingPhone;

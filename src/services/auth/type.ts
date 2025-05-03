@@ -11,6 +11,8 @@ export type AuthResponse = {
     status: number;
     success: boolean;
     error?: string;
+    redirectUrl?: string;
+    message?: string;
     user?: User | Admin;
     form?: AuthResponseForm
 }

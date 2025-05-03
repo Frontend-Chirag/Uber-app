@@ -50,6 +50,8 @@ async function handleAdminSubmit(validatedData: any): Promise<AuthResponse> {
 
     const sessionId = inAuthSessionId || uuid();
 
+    console.log('Initializing handle submit funcition')
+
     return adminAuthService.handleAdminAuth(
         flowType,
         screenType,
