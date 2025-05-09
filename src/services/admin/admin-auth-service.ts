@@ -358,19 +358,19 @@ export class AuthAdminService {
         try {
             const cookieStore = await cookies();
             const session = adminSession.getSession(sessionId);
-
+  
+            console.log('admin session',session)
 
             if (!session) {
                 return this.handleError(new Error('Session not found or expired'), HTTP_STATUS.UNAUTHORIZED);
             }
 
             // Check if session exists and is not expired
-            if (session.data.otp.value === otpCode && Date.now() < session.data.otp.expiresAt) {
+            if (session.data.otp.value === otpCode && Date.now() < session.data.otp.expiresAt && !session.data.AdminId) {
                 return this.handleError(new Error('Invalid or expired session'), HTTP_STATUS.UNAUTHORIZED)
             }
 
             // Check if OTP is valid and not expired
-            console.log(session)
 
             // Generate authentication tokens
             const { refreshToken, accessToken } = await generateTokens(session.data.AdminId!, 'super_admin');

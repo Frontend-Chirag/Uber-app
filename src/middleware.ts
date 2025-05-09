@@ -16,11 +16,11 @@ const securityHeaders = {
 const protectedRoutes = {
   '/driver': ['driver'],
   '/rider': ['rider'],
+  '/super_admin': ['super_admin'],
   '/dashboard': ['driver', 'rider']
 } as const;
 
 // Type for protected routes
-type ProtectedRoute = keyof typeof protectedRoutes;
 type UserRole = 'driver' | 'rider';
 
 /**
@@ -118,8 +118,10 @@ export const config = {
     '/driver/:path*',
     '/rider/:path*',
     '/dashboard/:path*',
+    '/admin/:path*',
     '/login',
     '/signup',
+    '/admin-login',
     '/'
   ]
 }

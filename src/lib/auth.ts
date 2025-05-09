@@ -15,7 +15,7 @@ import { adminInstance } from "@/services/admin/admin-services";
 export interface Session {
   session: {
     id: string,
-    role: string
+    role: Role
   } | null,
   accessToken: string | null;
   refreshToken: string | null;
@@ -24,14 +24,15 @@ export interface Session {
 
 
 
-export async function verifyToken(token: string, secret: string): Promise<{ user: { id: string, role: string }, exp: number } | null> {
+export async function verifyToken(token: string, secret: string): Promise<{ user: { id: string, role: Role }, exp: number } | null> {
   const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
 
   if (payload.exp && payload.exp * 1000 > Date.now()) {
+  console.log(payload)
     return {
       user: {
         id: payload.sub as string,
-        role: payload.role as string,
+        role: payload.role as Role,
       },
       exp: payload.exp
     };
@@ -105,6 +106,8 @@ export async function getServerSession(): Promise<Session> {
   const accessToken = cookieStore.get('accessToken')?.value ?? null;
   const refreshToken = cookieStore.get('refreshToken')?.value ?? null;
 
+  console.log(refreshToken, accessToken)
+
   if (!accessToken && !refreshToken) {
     return {
       session: null,
@@ -118,6 +121,7 @@ export async function getServerSession(): Promise<Session> {
     // First try to verify access token
     if (accessToken) {
       try {
+        console.log('accessToken validate' )
         const isValidToken = await verifyToken(accessToken, ENV.ACCESS_TOKEN_SECRET)
 
         if (isValidToken) {
