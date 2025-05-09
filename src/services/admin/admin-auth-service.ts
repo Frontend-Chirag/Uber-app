@@ -90,10 +90,7 @@ export class AuthAdminService {
     public async handleAdminAuth(flow: FlowType, screen: ScreenType, event: EventType, props: AuthServiceProps): Promise<AuthResponse> {
         try {
             const { fieldAnswers, sessionId } = props;
-            const headersList = await headers();
-            const forwardedFor = headersList.get('x-forwarded-for');
-            const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown';
-
+            const ip = await this.getIpAddress();
 
             if ((await adminSession.checkRateLimit(ip))) {
                 return this.handleError(new Error("Too many requests"), HTTP_STATUS.TOO_MANY_REQUESTS);
@@ -105,23 +102,6 @@ export class AuthAdminService {
 
             await adminSession.cleanupExpiredSessions();
             await adminSession.cleanupRateLimits();
-
-            const state = adminSession.createSession(props.sessionId, {
-                email: "",
-                phoneCountryCode: "",
-                phonenumber: "",
-                otp: {
-                    value: "",
-                    expiresAt: 0
-                },
-            }
-                , ip);
-
-            if (!state) {
-                this.handleError(AUTH_ERRORS.INTERNAL_SERVER_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR)
-            }
-
-            console.log(flow, screen, event, props, 'Admin function')
 
             const handler = this.handlers[flow]?.[screen]?.[event];
 
@@ -172,6 +152,13 @@ export class AuthAdminService {
         }
     }
 
+
+    private async getIpAddress(): Promise<string> {
+        const headersList = await headers();
+        const forwardedFor = headersList.get('x-forwarded-for');
+        const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown';
+        return ip;
+    }
     /**
      * Handle email verification for admin login
      */
@@ -179,6 +166,18 @@ export class AuthAdminService {
         try {
             const email = fieldAnswers[0].emailAddress as string;
             const password = fieldAnswers[1].password as string;
+            const ip = await this.getIpAddress();
+
+            // create session
+            adminSession.getSession(sessionId, {
+                email: "",
+                phoneCountryCode: "",
+                phonenumber: "",
+                otp: {
+                    value: "",
+                    expiresAt: 0
+                },
+            }, ip);
 
             const adminResult = await this.isValidAdmin(email, password);
 
@@ -197,7 +196,7 @@ export class AuthAdminService {
             });
 
             // Update session state
-            const newSession = adminSession.updateSession(sessionId, {
+            const updatedSession = adminSession.updateSession(sessionId, {
                 AdminId: adminResult.id,
                 email: adminResult.email,
                 phoneCountryCode: adminResult.phoneCountryCode,
@@ -205,7 +204,7 @@ export class AuthAdminService {
                 otp
             });
 
-            console.log('updated Session', newSession)
+            console.log('updated Session', updatedSession)
 
             // Create masked contact info
             const maskedContact = `****${adminResult.phonenumber.slice(-4)}`;
@@ -242,6 +241,18 @@ export class AuthAdminService {
         try {
             const phonenumber = fieldAnswers[0].phonenumber as string;
             const password = fieldAnswers[0].password as string;
+            const ip = await this.getIpAddress();
+
+            // create session
+            adminSession.getSession(sessionId, {
+                email: "",
+                phoneCountryCode: "",
+                phonenumber: "",
+                otp: {
+                    value: "",
+                    expiresAt: 0
+                },
+            }, ip);
 
             const adminResult = await this.isValidAdmin(phonenumber, password);
 
@@ -258,7 +269,7 @@ export class AuthAdminService {
             const otp = await sendOTPEmail({ email: adminResult.email });
 
             // Update session state
-            const newSession = adminSession.updateSession(sessionId, {
+            const updatedSession = adminSession.updateSession(sessionId, {
                 AdminId: adminResult.id,
                 email: adminResult.email,
                 phoneCountryCode: adminResult.phoneCountryCode,
@@ -266,7 +277,7 @@ export class AuthAdminService {
                 otp
             });
 
-            console.log(newSession);
+            console.log('updated Session', updatedSession);
 
             // Create masked contact info
             const maskedContact = `${adminResult.email.split('@')[0].slice(0, 2)}***@${adminResult.email.split('@')[1]}`;
@@ -301,7 +312,7 @@ export class AuthAdminService {
      */
     public async handleResendOTP({ sessionId }: AuthServiceProps): Promise<AuthResponse> {
         try {
-            const session = adminSession.getSession(sessionId);
+            const session = adminSession.getSession(sessionId, null, null);
 
             if (!session) {
                 return this.handleError(new Error('Invalid or expired session'), HTTP_STATUS.UNAUTHORIZED)
@@ -357,20 +368,18 @@ export class AuthAdminService {
     private async verifyOTP(sessionId: string, otpCode: string): Promise<AuthResponse> {
         try {
             const cookieStore = await cookies();
-            const session = adminSession.getSession(sessionId);
-  
-            console.log('admin session',session)
+            const session = adminSession.getSession(sessionId, null, null);
+
+            console.log('verify otp session', session)
 
             if (!session) {
                 return this.handleError(new Error('Session not found or expired'), HTTP_STATUS.UNAUTHORIZED);
             }
 
-            // Check if session exists and is not expired
-            if (session.data.otp.value === otpCode && Date.now() < session.data.otp.expiresAt && !session.data.AdminId) {
+            // check if otp is valid and not expired
+            if (session.data.otp.value !== otpCode || Date.now() > session.data.otp.expiresAt ) {
                 return this.handleError(new Error('Invalid or expired session'), HTTP_STATUS.UNAUTHORIZED)
             }
-
-            // Check if OTP is valid and not expired
 
             // Generate authentication tokens
             const { refreshToken, accessToken } = await generateTokens(session.data.AdminId!, 'super_admin');
@@ -395,10 +404,10 @@ export class AuthAdminService {
 
             // Redirect to dashboard
             return this.response
-            .setRedirect('admin-dashboard')
-            .setSuccess(true)
-            .setMessage('Welcome to your dashboard')
-            .build();
+                .setRedirect('admin-dashboard')
+                .setSuccess(true)
+                .setMessage('Welcome to your dashboard')
+                .build();
         } catch (error) {
             console.error('OTP verification error:', error);
             return this.handleError(error);

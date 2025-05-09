@@ -116,7 +116,7 @@ export class SessionManager<T> {
         }
     }
 
-    createSession(id: string, data: T, ip?: string, ttlMs = this.SESSION_TTL_MS): SessionData<T> {
+    createSession(id: string, data: T, ip: string, ttlMs = this.SESSION_TTL_MS): SessionData<T> {
         const now = new Date();
         const expiresAt = new Date(now.getTime() + ttlMs);
         const session = { id, data, createdAt: now, expiresAt, ip };
@@ -125,8 +125,14 @@ export class SessionManager<T> {
         return session;
     }
 
-    getSession(id: string): SessionData<T> | null {
-        console.log('all session data', this.sessionStore);
+    getSession(id: string, data: T | null, ip: string | null): SessionData<T> | null {
+        const session = this.sessionStore.get(id) || null;
+        if (!session) {
+            if (data && ip) {
+                return this.createSession(id, data, ip);
+            }
+            return null;
+        }
         return this.sessionStore.get(id) || null;
     }
 
