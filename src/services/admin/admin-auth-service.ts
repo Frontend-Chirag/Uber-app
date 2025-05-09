@@ -14,6 +14,7 @@ import { Admin } from "@prisma/client";
 import { findEnumKey } from "@/lib/utils";
 import { HTTP_STATUS } from "@/lib/constants";
 import { getSessionManager } from "../session/session-service";
+import { AdminService } from "./admin-services";
 
 type HandlerFunction = (props: AuthServiceProps) => Promise<AuthResponse>;
 type EventHandlers = Partial<Record<EventType, HandlerFunction>>;
@@ -370,19 +371,22 @@ export class AuthAdminService {
             const cookieStore = await cookies();
             const session = adminSession.getSession(sessionId, null, null);
 
-            console.log('verify otp session', session)
-
             if (!session) {
                 return this.handleError(new Error('Session not found or expired'), HTTP_STATUS.UNAUTHORIZED);
             }
 
             // check if otp is valid and not expired
-            if (session.data.otp.value !== otpCode || Date.now() > session.data.otp.expiresAt ) {
+            if (session.data.otp.value !== otpCode || Date.now() > session.data.otp.expiresAt || !session.data.AdminId) {
                 return this.handleError(new Error('Invalid or expired session'), HTTP_STATUS.UNAUTHORIZED)
             }
 
+
             // Generate authentication tokens
-            const { refreshToken, accessToken } = await generateTokens(session.data.AdminId!, 'super_admin');
+            const { refreshToken, accessToken } = await generateTokens(session.data.AdminId, 'super_admin');
+
+            AdminService.getInstance().updateAdmin(session.data.AdminId, {
+                refreshToken
+            })
 
             // Set secure cookies
             cookieStore.set('accessToken', accessToken, {
@@ -404,7 +408,7 @@ export class AuthAdminService {
 
             // Redirect to dashboard
             return this.response
-                .setRedirect('admin-dashboard')
+                .setRedirect('super_admin')
                 .setSuccess(true)
                 .setMessage('Welcome to your dashboard')
                 .build();

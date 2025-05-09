@@ -28,7 +28,7 @@ export async function verifyToken(token: string, secret: string): Promise<{ user
   const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
 
   if (payload.exp && payload.exp * 1000 > Date.now()) {
-  console.log(payload)
+    console.log(payload)
     return {
       user: {
         id: payload.sub as string,
@@ -44,26 +44,40 @@ export async function verifyRefreshTokenAndIssueNewTokens(token: string, cookieS
   try {
     const { payload } = await jwtVerify(token, new TextEncoder().encode(ENV.REFRESH_TOKEN_SECRET));
 
+    const role = payload.role as Role;
+
     if (payload.exp && payload.exp * 1000 > Date.now()) {
 
       let user: User | Admin;
 
-      if (payload.role !== 'admin') {
-        user = await userInstance.getCachedUser(payload.sub as string) as User;
-      } else {
+      console.log('payload', payload)
+
+      if (role === 'super_admin') {
         user = (await adminInstance.getCachedAdmin(payload.sub as string)).data as Admin;
+      } else {
+        user = await userInstance.getCachedUser(payload.sub as string) as User;
       }
 
+      console.log('adminuser', user)
 
-      if (!user || user.refreshToken === token) return null;
+
+      if (!user || user.refreshToken !== token) return null;
+
 
       const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await generateTokens(user.id, user.role);
 
       // Update refresh token in database
-      await db.user.update({
-        where: { id: user.id },
-        data: { refreshToken: newRefreshToken }
-      });
+      if (user.role === 'super_admin') {
+        await db.admin.update({
+          where: { id: user.id },
+          data: { refreshToken: newRefreshToken }
+        });
+      } else {
+        await db.user.update({
+          where: { id: user.id },
+          data: { refreshToken: newRefreshToken }
+        });
+      }
 
       // Set new cookies
       cookieStore.set('accessToken', newAccessToken, {
@@ -121,7 +135,7 @@ export async function getServerSession(): Promise<Session> {
     // First try to verify access token
     if (accessToken) {
       try {
-        console.log('accessToken validate' )
+        console.log('accessToken validate')
         const isValidToken = await verifyToken(accessToken, ENV.ACCESS_TOKEN_SECRET)
 
         if (isValidToken) {
