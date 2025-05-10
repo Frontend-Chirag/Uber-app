@@ -21,9 +21,6 @@ async function main() {
                 password: hashedPassword,
             }
         });
-
-        console.log('Admin user created successfully!');
-        console.log('Admin email:', admin.email);
     } catch (error) {
         console.error('Error seeding admin:', error);
     } finally {

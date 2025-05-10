@@ -1,3 +1,4 @@
+import { CreateDriverRegirationDoc } from '@/features/admin/driver-registration-document/create-registration-document';
 import { getServerSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import React from 'react'
@@ -8,8 +9,10 @@ export default async function SuperAdmin() {
     if (!session || session?.role !== 'super_admin') {
         redirect('/')
     };
-    
+
     return (
-        <div>SuperAdmin</div>
+        <div>
+            <CreateDriverRegirationDoc />
+        </div>
     )
 }

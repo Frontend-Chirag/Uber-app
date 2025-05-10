@@ -302,3 +302,14 @@ model Admin {
 
     @@index([email, phonenumber, id])
 }
+
+model RegistrationStepTemplate {
+    id          String               @id @default(auto()) @map("_id") @db.ObjectId
+    title       String
+    subtitle    String?
+    type        RegistrationStepType
+    countryCode String
+    regionCode  String?
+    options     Json
+    createdAt   DateTime             @default(now())
+}

@@ -1,4 +1,4 @@
-import "server-only";
+"use server";
 
 import { db } from './db/prisma';
 import { Admin, Role, User } from '@prisma/client';
@@ -58,11 +58,13 @@ export async function verifyRefreshTokenAndIssueNewTokens(token: string, cookieS
         user = await userInstance.getCachedUser(payload.sub as string) as User;
       }
 
-      console.log('adminuser', user)
+      console.log('check for user and refreshToken', user.refreshToken !== token)
 
+      console.log(user.refreshToken, token)
 
       if (!user || user.refreshToken !== token) return null;
 
+      console.log('user', user)
 
       const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await generateTokens(user.id, user.role);
 
@@ -110,9 +112,7 @@ export async function verifyRefreshTokenAndIssueNewTokens(token: string, cookieS
     console.log(error);
     return null;
   }
-}
-
-
+};
 
 export async function getServerSession(): Promise<Session> {
   "use server";
@@ -120,7 +120,6 @@ export async function getServerSession(): Promise<Session> {
   const accessToken = cookieStore.get('accessToken')?.value ?? null;
   const refreshToken = cookieStore.get('refreshToken')?.value ?? null;
 
-  console.log(refreshToken, accessToken)
 
   if (!accessToken && !refreshToken) {
     return {
@@ -158,6 +157,8 @@ export async function getServerSession(): Promise<Session> {
     if (refreshToken) {
       try {
         const session = await verifyRefreshTokenAndIssueNewTokens(refreshToken, cookieStore);
+
+        console.log('verify session', session)
 
         if (session) {
           return session;

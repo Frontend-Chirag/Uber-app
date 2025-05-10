@@ -92,9 +92,9 @@ export async function middleware(request: NextRequest) {
   const response = createSecureResponse(request);
 
   // Add Ip and role headers;
-  const ip = await getClientIp(request);
+  await getClientIp(request);
 
-  console.log('IP ADDRESS', ip, 'IP from headers', request.headers.get('x-forwarded-for'))
+  console.log('middleware',session)
 
   if (session) {
     response.headers.set('x-user-role', session.role);
@@ -102,10 +102,12 @@ export async function middleware(request: NextRequest) {
 
   // Handle route protection
   if (!session && Object.keys(protectedRoutes).some(route => pathname.startsWith(route))) {
+    console.log('redirect to home', session)
     return NextResponse.redirect(new URL('/', request.url))
   };
 
   if (session && !hasRouteAccess(pathname, session.role as UserRole)) {
+    console.log('redirect to role access', session)
     return NextResponse.redirect(new URL(`/${session.role}`, request.url))
   };
 
