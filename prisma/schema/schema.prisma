@@ -1,6 +1,6 @@
 generator client {
     provider        = "prisma-client-js"
-    previewFeatures = ["prismaSchemaFolder", "driverAdapters"]
+    previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -85,27 +85,27 @@ type emergencyContacts {
 // ================================
 
 model Driver {
-    id                     String         @id @default(auto()) @map("_id") @db.ObjectId
-    user                   User           @relation(fields: [userId], references: [id])
-    userId                 String         @unique @db.ObjectId
+    id                     String                @id @default(auto()) @map("_id") @db.ObjectId
+    user                   User                  @relation(fields: [userId], references: [id])
+    userId                 String                @unique @db.ObjectId
     documents              Document[]
-    status                 DriverStatus   @default(OFFLINE)
+    status                 DriverStatus          @default(OFFLINE)
     vehicleType            VehicleType?
     vehicle                Vehicle?
     earnings               Earnings?
     Ride                   Ride[]
-    rating                 Float          @default(5.0)
-    totalRides             Int            @default(0)
-    cancelledRides         Int            @default(0)
-    isVerified             Boolean        @default(false)
-    Registration           Registration[]
-    isRegistrationComplete Boolean        @default(false)
-    serviceArea            ServiceArea?   @relation(fields: [serviceAreaId], references: [id])
-    serviceAreaId          String?        @db.ObjectId
-    isInServiceArea        Boolean        @default(true)
+    rating                 Float                 @default(5.0)
+    totalRides             Int                   @default(0)
+    cancelledRides         Int                   @default(0)
+    isVerified             Boolean               @default(false)
+    registrationProgress   RegistrationProgress?
+    isRegistrationComplete Boolean               @default(false)
+    serviceArea            ServiceArea?          @relation(fields: [serviceAreaId], references: [id])
+    serviceAreaId          String?               @db.ObjectId
+    isInServiceArea        Boolean               @default(true)
     availability           Availability?
-    createdAt              DateTime       @default(now())
-    updatedAt              DateTime       @updatedAt
+    createdAt              DateTime              @default(now())
+    updatedAt              DateTime              @updatedAt
 
     @@index([userId, id, status, vehicleType])
 }
@@ -183,25 +183,22 @@ enum VehicleType {
 // ================================
 
 model Document {
-    id         String       @id @default(auto()) @map("_id") @db.ObjectId
-    driver     Driver       @relation(fields: [driverId], references: [id])
-    driverId   String       @db.ObjectId
-    type       DocumentType
+    id         String        @id @default(auto()) @map("_id") @db.ObjectId
+    driver     Driver        @relation(fields: [driverId], references: [id])
+    driverId   String        @db.ObjectId
+    type       StepType
+    documentId String
+    name       String
     number     String
-    frontImage String
-    backImage  String
-    expiryDate DateTime?
-    isVerified Boolean      @default(false)
-    createdAt  DateTime     @default(now())
-    updatedAt  DateTime     @updatedAt
+    imageUrl   DocumentImage
+    isVerified Boolean       @default(false)
+    createdAt  DateTime      @default(now())
+    updatedAt  DateTime      @updatedAt
 }
 
-enum DocumentType {
-    AADHAAR
-    PAN
-    DRIVING_LICENSE
-    VEHICLE_REGISTRATION
-    VEHICLE_INSURANCE
+type DocumentImage {
+    front String
+    back  String?
 }
 
 // ================================
@@ -240,21 +237,35 @@ model Ride {
 }
 
 // ================================
-// Registration Model
+// Admin Model
 // ================================
 
-model Registration {
-    id        String                  @id @default(auto()) @map("_id") @db.ObjectId
-    driver    Driver                  @relation(fields: [driverId], references: [id])
-    driverId  String                  @db.ObjectId
-    type      RegistrationStepType
-    status    RegistrationStatus      @default(not_started)
-    display   RegistrationStepDisplay
-    options   RegistrationStepOptions
-    createdAt DateTime                @default(now())
-    updatedAt DateTime                @updatedAt
+model Admin {
+    id               String   @id @default(auto()) @map("_id") @db.ObjectId
+    phonenumber      String   @unique
+    phoneCountryCode String
+    email            String   @unique
+    role             Role
+    password         String
+    refreshToken     String?
+    createdAt        DateTime @default(now())
+    updatedAt        DateTime @updatedAt
 
-    @@index([driverId, status, id])
+    @@index([email, phonenumber, id])
+}
+
+// ================================
+// Registration Template Models
+// ================================
+
+model RegistrationTemplate {
+    id        String             @id @default(auto()) @map("_id") @db.ObjectId
+    country   String
+    steps     RegistrationStep[]
+    createdAt DateTime           @default(now())
+    updatedAt DateTime           @updatedAt
+
+    @@unique([country])
 }
 
 type RegistrationStepDisplay {
@@ -277,39 +288,57 @@ enum RegistrationStatus {
     failed
 }
 
-enum RegistrationStepType {
-    driversLicense
+model RegistrationStep {
+    id         String                  @id @default(auto()) @map("_id") @db.ObjectId
+    status     RegistrationStatus
+    definition StepDefinition?
+    display    RegistrationStepDisplay
+    options    RegistrationStepOptions
+    isActive   Boolean                 @default(true)
+    createdAt  DateTime                @default(now())
+    updatedAt  DateTime                @updatedAt
+    template   RegistrationTemplate    @relation(fields: [templateId], references: [id])
+    templateId String                  @db.ObjectId
+}
+
+model StepDefinition {
+    id          String           @id @default(auto()) @map("_id") @db.ObjectId
+    step        RegistrationStep @relation(fields: [stepId], references: [id])
+    stepId      String           @unique @db.ObjectId
+    type        StepType
+    stepVersion Int
+    display     StepDisplay
+    createdAt   DateTime         @default(now())
+    updatedAt   DateTime         @updatedAt
+
+    @@unique([stepId, type, stepVersion])
+}
+
+type StepDisplay {
+    StepTitle                    String
+    StepPreviewTopInstruction    String?
+    StepPreviewBottomInstruction String?
+    StepPreviewInstructionsList  String[]
+    StepPreviewImageURL          String?
+    StepUploadActionText         String?
+    StepUseMyPhoneText           String?
+}
+
+enum StepType {
+    driverLicense
     profilePhoto
     document
     vehicleRegistration
     vehicleInsurance
 }
 
-// ================================
-// Admin Model
-// ================================
-
-model Admin {
-    id               String   @id @default(auto()) @map("_id") @db.ObjectId
-    phonenumber      String   @unique
-    phoneCountryCode String
-    email            String   @unique
-    role             Role
-    password         String
-    refreshToken     String?
-    createdAt        DateTime @default(now())
-    updatedAt        DateTime @updatedAt
-
-    @@index([email, phonenumber, id])
-}
-
-model RegistrationStepTemplate {
-    id          String               @id @default(auto()) @map("_id") @db.ObjectId
-    title       String
-    subtitle    String?
-    type        RegistrationStepType
-    countryCode String
-    regionCode  String?
-    options     Json
-    createdAt   DateTime             @default(now())
+model RegistrationProgress {
+    id             String   @id @default(auto()) @map("_id") @db.ObjectId
+    driver         Driver   @relation(fields: [driverId], references: [id])
+    driverId       String   @unique @db.ObjectId
+    country        String
+    currentStepId  String
+    completedSteps String[]
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
 }

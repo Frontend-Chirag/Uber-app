@@ -12,7 +12,7 @@ async function main() {
         const hashedPassword = await bcryptjs.hash('adminDash@123', 10);
 
         // create or update admin user
-        const admin = await db.admin.create({
+        await db.admin.create({
             data: {
                 email: 'anujkashyap123000@gmail.com',
                 phoneCountryCode: '+91',

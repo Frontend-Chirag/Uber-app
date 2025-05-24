@@ -50,6 +50,17 @@ export class UserService {
         return this.userCache.delete(id);
     }
 
+    public async updateUser(id: string, data: Partial<User>) {
+        const user = await db.user.update({
+            where: { id },
+            data
+        });
+
+        if (user) this.setCachedUser(id, user);
+
+        return user;
+    }
+
 
 };
 

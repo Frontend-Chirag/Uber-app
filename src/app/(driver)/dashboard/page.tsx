@@ -16,21 +16,13 @@ export default async function DriverPage() {
 
 
     const driverService = DriverServices.getInstance();
-    const driver = await driverService.initializeDriverRegistration(session.id);
+    const driver = await driverService.getDriver(session.id);
 
     // If no driver record or incomplete registration, redirect to registration
-    if (!driver || !driver.Registration.length) {
+    if (!driver?.isRegistrationComplete) {
         redirect('/driver/registration');
     }
 
-    // Check if all registration steps are completed
-    const isRegistrationComplete = driver.Registration.every(
-        step => step.status === 'completed'
-    );
-
-    if (!isRegistrationComplete) {
-        redirect('/driver/registration');
-    }
 
     return (
         <div>

@@ -53,7 +53,7 @@ export async function verifyRefreshTokenAndIssueNewTokens(token: string, cookieS
       console.log('payload', payload)
 
       if (role === 'super_admin') {
-        user = (await adminInstance.getCachedAdmin(payload.sub as string)).data as Admin;
+        user = await adminInstance.cache.getCachedAdmin(payload.sub as string) as Admin;
       } else {
         user = await userInstance.getCachedUser(payload.sub as string) as User;
       }
@@ -70,14 +70,12 @@ export async function verifyRefreshTokenAndIssueNewTokens(token: string, cookieS
 
       // Update refresh token in database
       if (user.role === 'super_admin') {
-        await db.admin.update({
-          where: { id: user.id },
-          data: { refreshToken: newRefreshToken }
+        await adminInstance.cache.updateAdmin(user.id, {
+          refreshToken: newRefreshToken
         });
       } else {
-        await db.user.update({
-          where: { id: user.id },
-          data: { refreshToken: newRefreshToken }
+        await userInstance.updateUser(user.id, {
+          refreshToken: newRefreshToken
         });
       }
 

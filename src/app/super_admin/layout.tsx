@@ -10,7 +10,7 @@ interface AdminLayoutProps {
 const AdminLayout = ({ children }: AdminLayoutProps) => {
 
     return (
-        <div>
+        <div className='flex flex-col  max-h-screen h-screen  gap-4'>
             <Navbar
                 className='bg-primary text-white'
             />

@@ -1,8 +1,10 @@
 import { headers } from "next/headers";
-import { CountryCode, getRegistrationSteps } from "../registrationConfig";
+import { CountryCode } from "@/types/step-hub";
 import { db } from "@/lib/db/prisma";
-import { Driver, Registration, User } from "@prisma/client";
+import { Driver, RegistrationProgress, User } from "@prisma/client";
 import { userInstance } from "../user/user-service";
+import { registrationService } from "../registration-template/registration-template-service";
+
 
 
 
@@ -69,8 +71,9 @@ async function getLocation() {
  */
 export class DriverServices {
     private static instance: DriverServices;
-    private driverCache: Map<string, Driver & { Registration: Registration[]; user: User }> = new Map();
-
+    private driverCache: Map<string, Driver & { user: User }> = new Map();
+    private driverRegistration: Map<string, RegistrationProgress> = new Map(); 
+    
     private constructor() {
         return DriverServices.instance;
     }
@@ -86,10 +89,10 @@ export class DriverServices {
         const driver = await db.driver.findUnique({
             where: { userId },
             include: {
-                Registration: true,
-                user: true
+                user: true,
             }
         });
+
 
         if (driver) {
             this.driverCache.set(userId, driver);
@@ -116,67 +119,16 @@ export class DriverServices {
      * Creates driver record and registration steps based on country
      * Uses transaction to ensure data consistency
      */
-    public async initializeDriverRegistration(userId: string) {
+    public async initializeDriverRegistration() {
         try {
-            const existingDriver = await this.getDriver(userId);
-            if (existingDriver?.Registration.length) return existingDriver;
 
             const location = await getLocation();
-            const registrationSteps = getRegistrationSteps(location.countryCode.toUpperCase());
-            if (!registrationSteps?.length) return null;
 
-            const driverWithSteps = await db.$transaction(async (tx) => {
-                const driver = await tx.driver.upsert({
-                    where: { userId },
-                    create: {
-                        userId,
-                        status: 'OFFLINE',
-                        isVerified: false,
-                        isRegistrationComplete: false,
-                        isInServiceArea: true,
-                        rating: 5,
-                        totalRides: 0,
-                        cancelledRides: 0,
-                    },
-                    update: {}
-                });
+            const registrationStep = await registrationService.getRegistrationSteps(location.countryCode);
 
-                const existingSteps = await tx.registration.findMany({
-                    where: { driverId: driver.id }
-                });
 
-                if (!existingSteps.length) {
-                    await tx.registration.createMany({
-                        data: registrationSteps.map((step, idx) => ({
-                            driverId: driver.id,
-                            type: step.type,
-                            display: step.display,
-                            options: {
-                                ...step.options,
-                                isRecommended: idx === 0
-                            },
-                            status: step.status,
-                        })),
-                    });
-                }
 
-                return await tx.driver.findUnique({
-                    where: { userId },
-                    include: {
-                        Registration: true,
-                        user: true,
-                    },
-                });
-            });
 
-            if (driverWithSteps) {
-                this.driverCache.set(userId, driverWithSteps);
-                if (driverWithSteps.user) {
-                    userInstance.setCachedUser(userId, driverWithSteps.user)
-                }
-            }
-
-            return driverWithSteps;
         } catch (error) {
             console.error('Error in initializeDriverRegistration:', error);
             return null;

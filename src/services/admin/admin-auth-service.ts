@@ -384,12 +384,13 @@ export class AuthAdminService {
             // Generate authentication tokens
             const { refreshToken, accessToken } = await generateTokens(session.data.AdminId, 'super_admin');
 
-            const updatedAdmin = await AdminService.getInstance().updateAdmin(session.data.AdminId, {
+            const updatedAdmin = await AdminService.getInstance().cache.updateAdmin(session.data.AdminId, {
                 refreshToken
             });
 
-
-            console.log(updatedAdmin.data.refreshToken);
+            if (!updatedAdmin) {
+                return this.handleError(new Error('Failed to update admin'), HTTP_STATUS.INTERNAL_SERVER_ERROR)
+            }
 
             // Set secure cookies
             cookieStore.set('accessToken', accessToken, {
