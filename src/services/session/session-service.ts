@@ -5,7 +5,6 @@ import { OTP } from "../security/otp";
 
 export interface UserSession {
     flowType: FlowType;
-    role: Role;
     eventType?: EventType;
     firstname: string;
     lastname: string;

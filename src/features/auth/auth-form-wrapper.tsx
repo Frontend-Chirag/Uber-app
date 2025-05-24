@@ -23,9 +23,7 @@ type ScreenConfig = {
 };
 
 type ScreenConfigs = {
-    [K in Role]: {
-        [S in ScreenType]?: ScreenConfig;
-    };
+    [S in ScreenType]?: ScreenConfig;
 };
 
 interface AuthWrapperProps {
@@ -38,69 +36,49 @@ const DEFAULT_TITLE_CLASS = "text-2xl font-Rubik-SemiBold";
 const DEFAULT_SUBTITLE_CLASS = "text-base font-normal mt-0.5";
 
 const SCREEN_CONFIGS: ScreenConfigs = {
-    [Role.rider]: {
-        [ScreenType.EMAIL_OTP_CODE]: {
-            title: (hintValue) => hintValue.firstname
-                ? `Welcome back, ${hintValue.firstname}`
-                : `Enter the 4-digit code sent to: ${hintValue.emailorPhone}`,
-            subtitle: (hintValue) => `Enter the 4-digit code sent to your email: ${hintValue.emailorPhone}`,
-            className: DEFAULT_TITLE_CLASS
-        },
-        [ScreenType.PHONE_OTP]: {
-            title: (hintValue) => hintValue.firstname
-                ? `Welcome back, ${hintValue.firstname}`
-                : `Enter the 4-digit code sent via SMS to: ${hintValue.emailorPhone}`,
-            subtitle: (hintValue) => `Enter the 4-digit code sent to your your phone number: ${hintValue.emailorPhone}`,
-            className: DEFAULT_TITLE_CLASS
-        },
-        [ScreenType.EMAIL_ADDRESS_PROGESSIVE]: {
-            title: "Enter your Email address (optional)",
-            className: DEFAULT_TITLE_CLASS
-        },
-        [ScreenType.PHONE_NUMBER_PROGRESSIVE]: {
-            title: "Enter your Phone number (optional)",
-            className: DEFAULT_TITLE_CLASS
-        },
-        [ScreenType.FIRST_NAME_LAST_NAME]: {
-            title: "Let us know how to properly address you",
-            className: DEFAULT_TITLE_CLASS
-        },
-        [ScreenType.AGREE_TERMS_AND_CONDITIONS]: {
-            title: "Accept Uber's Terms & Review Privacy Notice",
-            className: DEFAULT_TITLE_CLASS,
-            wrapper: true
-        },
-        [ScreenType.PHONE_NUMBER_INITIAL]: {
-            title: "What's your phone number or email?",
-            className: DEFAULT_TITLE_CLASS
-        }
+    [ScreenType.EMAIL_OTP_CODE]: {
+        title: (hintValue) => hintValue.firstname
+            ? `Welcome back, ${hintValue.firstname}`
+            : `Enter the 4-digit code sent to: ${hintValue.emailorPhone}`,
+        subtitle: (hintValue) => `Enter the 4-digit code sent to your email: ${hintValue.emailorPhone}`,
+        className: DEFAULT_TITLE_CLASS
     },
-    [Role.driver]: {},
-    [Role.super_admin]: {
-        [ScreenType.PHONE_NUMBER_INITIAL]: {
-            title: "Admin Portal",
-            subtitle: "Sign up to manage your workspace and stay in control",
-            className: DEFAULT_TITLE_CLASS
-        },
-        [ScreenType.EMAIL_OTP_CODE]: {
-            title: (hintValue) => `Enter the 4-digit code sent to: ${hintValue.emailorPhone}`,
-            className: DEFAULT_TITLE_CLASS
-        },
-        [ScreenType.PHONE_OTP]: {
-            title: (hintValue) => `Enter the 4-digit code sent via SMS to: ${hintValue.emailorPhone}`,
-            className: DEFAULT_TITLE_CLASS
-        },
+    [ScreenType.PHONE_OTP]: {
+        title: (hintValue) => hintValue.firstname
+            ? `Welcome back, ${hintValue.firstname}`
+            : `Enter the 4-digit code sent via SMS to: ${hintValue.emailorPhone}`,
+        subtitle: (hintValue) => `Enter the 4-digit code sent to your your phone number: ${hintValue.emailorPhone}`,
+        className: DEFAULT_TITLE_CLASS
+    },
+    [ScreenType.EMAIL_ADDRESS_PROGESSIVE]: {
+        title: "Enter your Email address (optional)",
+        className: DEFAULT_TITLE_CLASS
+    },
+    [ScreenType.PHONE_NUMBER_PROGRESSIVE]: {
+        title: "Enter your Phone number (optional)",
+        className: DEFAULT_TITLE_CLASS
+    },
+    [ScreenType.FIRST_NAME_LAST_NAME]: {
+        title: "Let us know how to properly address you",
+        className: DEFAULT_TITLE_CLASS
+    },
+    [ScreenType.AGREE_TERMS_AND_CONDITIONS]: {
+        title: "Accept Uber's Terms & Review Privacy Notice",
+        className: DEFAULT_TITLE_CLASS,
+        wrapper: true
+    },
+    [ScreenType.PHONE_NUMBER_INITIAL]: {
+        title: "What's your phone number or email?",
+        className: DEFAULT_TITLE_CLASS
     }
 };
 
 // ===== UTILITIES =====
 const getTitleConfig = (
-    role: Role,
     screenType: ScreenType,
     hintValue: { emailorPhone: string, firstname?: string }
 ): TitleConfig | null => {
-    console.log(role, screenType)
-    const config = SCREEN_CONFIGS[role][screenType];
+    const config = SCREEN_CONFIGS[screenType];
     if (!config) return null;
 
     const title = typeof config.title === 'function'
@@ -123,14 +101,14 @@ const getTitleConfig = (
 
 // ===== COMPONENTS =====
 const TitleContainer = () => {
-    const { screenType, hintValue, eventType, role} = useAuthFlow();
+    const { screenType, hintValue, eventType } = useAuthFlow();
 
     const isExistingUser = eventType === EventType.TypeInputExistingEmail ||
         eventType === EventType.TypeInputExistingPhone;
 
     const titleConfig = useMemo(() =>
-        getTitleConfig(role, screenType, hintValue),
-        [screenType, hintValue, role]
+        getTitleConfig(screenType, hintValue),
+        [screenType, hintValue]
     );
 
     console.log(titleConfig)

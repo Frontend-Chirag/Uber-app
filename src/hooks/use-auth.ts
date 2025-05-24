@@ -6,11 +6,11 @@ import { toast } from "sonner";
 import {useRouter} from 'next/navigation'
 
 
-export const useAuth = (role: Role) => {
+export const useAuth = () => {
     const router = useRouter();
     const mutation = useMutation<AuthResponse, Error, AuthRequest>({
         mutationFn: async (req) => {
-            const response = await submit(req, role);
+            const response = await submit(req);
 
             if (response.error) {
                 throw new Error(response.error)

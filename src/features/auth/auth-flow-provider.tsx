@@ -5,7 +5,7 @@ import { EventType, FieldType, FlowType, ScreenType } from '@/types';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ScreenLoader } from '../../components/shared/screen-loader';
-import { Role } from '@prisma/client';
+import {  } from '@prisma/client';
 
 
 export interface FlowConfig {
@@ -15,26 +15,12 @@ export interface FlowConfig {
     initialFlowType: FlowType;
 }
 
-// Default flow configuration for different roles
-export const FLOW_CONFIGS: Record<Role, FlowConfig> = {
-    rider: {
-        initialScreen: ScreenType.PHONE_NUMBER_INITIAL,
-        initialFieldTypes: [FieldType.EMAIL_ADDRESS],
-        initialEventType: EventType.TypeInputEmail,
-        initialFlowType: FlowType.INITIAL
-    },
-    driver: {
-        initialScreen: ScreenType.PHONE_NUMBER_INITIAL,
-        initialFieldTypes: [FieldType.EMAIL_ADDRESS],
-        initialEventType: EventType.TypeInputEmail,
-        initialFlowType: FlowType.INITIAL
-    },
-    super_admin: {
-        initialScreen: ScreenType.PHONE_NUMBER_INITIAL, 
-        initialFieldTypes: [FieldType.EMAIL_ADDRESS, FieldType.PASSWORD],
-        initialEventType: EventType.TypeInputEmail,
-        initialFlowType: FlowType.INITIAL
-    },
+// Default flow configuration for different s
+export const FLOW_CONFIGS: FlowConfig = {
+    initialScreen: ScreenType.PHONE_NUMBER_INITIAL,
+    initialFieldTypes: [FieldType.EMAIL_ADDRESS],
+    initialEventType: EventType.TypeInputEmail,
+    initialFlowType: FlowType.INITIAL
 }
 
 interface AuthFlowState {
@@ -67,45 +53,38 @@ interface AuthFlowContextProps extends AuthFlowState {
         };
         inAuthSessionId: string;
     };
-    role: Role
 }
 
 const AuthFlowContext = createContext<AuthFlowContextProps | null>(null);
 
-export const AuthFlowProvider = ({ children, role }: { children: ReactNode, role: Role }) => {
-
-    // Get the appropriate flow configuration for the role
-    const flowConfig = FLOW_CONFIGS[role] || FLOW_CONFIGS.rider;
-
-    console.log(flowConfig)
-
+export const AuthFlowProvider = ({ children,  }: { children: ReactNode}) => {
 
     const [state, setState] = useState<AuthFlowState>({
-        screenType: flowConfig.initialScreen,
-        fieldType: flowConfig.initialFieldTypes,
-        eventType: flowConfig.initialEventType,
-        flowType: flowConfig.initialFlowType,
-    inAuthSessionId: '',
-    hintValue: {
-       emailorPhone: ''
-    },
-    isLoadingNextScreen: false,
+        screenType: FLOW_CONFIGS.initialScreen,
+        fieldType: FLOW_CONFIGS.initialFieldTypes,
+        eventType: FLOW_CONFIGS.initialEventType,
+        flowType: FLOW_CONFIGS.initialFlowType,
+        inAuthSessionId: '',
+        hintValue: {
+            emailorPhone: ''
+        },
+        isLoadingNextScreen: false,
     });
 
     // Reset flow to inital state
     const resetFlow = useCallback(() => {
         setState({
-            screenType: flowConfig.initialScreen,
-            fieldType: flowConfig.initialFieldTypes,
-            eventType: flowConfig.initialEventType,
-            flowType: flowConfig.initialFlowType,
+            screenType: FLOW_CONFIGS.initialScreen,
+            fieldType: FLOW_CONFIGS.initialFieldTypes,
+            eventType: FLOW_CONFIGS.initialEventType,
+            flowType: FLOW_CONFIGS.initialFlowType,
             inAuthSessionId: '',
             hintValue: {
                 emailorPhone: ''
             },
             isLoadingNextScreen: false,
         })
-    }, [flowConfig])
+    }, [FLOW_CONFIGS])
 
     const setters = useMemo(() => ({
         setScreenType: (screenType: ScreenType) => setState(prev => ({ ...prev, screenType })),
@@ -138,8 +117,7 @@ export const AuthFlowProvider = ({ children, role }: { children: ReactNode, role
         ...state,
         ...setters,
         createFormData,
-        role
-    }), [state, setters, createFormData, role]);
+    }), [state, setters, createFormData]);
 
     return (
         <AuthFlowContext.Provider value={contextValue}>

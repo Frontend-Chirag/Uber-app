@@ -17,7 +17,7 @@ const shouldShowEmailPhoneToggle = (flow: FlowType, screen: ScreenType) => {
 
 export const AuthFormFields = memo(() => {
     const form = useFormContext();
-    const { flowType, fieldType, screenType, setFieldType, setEventType, role } = useAuthFlow();
+    const { flowType, fieldType, screenType, setFieldType, setEventType } = useAuthFlow();
 
     const isInitial = flowType === FlowType.INITIAL;
     const showEmailPhoneToggle = shouldShowEmailPhoneToggle(flowType, screenType);
@@ -29,11 +29,11 @@ export const AuthFormFields = memo(() => {
         let newFieldType: FieldType[]
 
         if (isEmail) {
-            newFieldType = role === 'super_admin' ? [FieldType.EMAIL_ADDRESS, FieldType.PASSWORD] : [FieldType.EMAIL_ADDRESS]
+            newFieldType = [FieldType.EMAIL_ADDRESS]
             setEventType(EventType.TypeInputEmail);
         } else {
             form.setValue('phoneNumber', value);
-            newFieldType = role === 'super_admin' ? [FieldType.PHONE_COUNTRY_CODE, FieldType.PHONE_NUMBER, FieldType.PASSWORD] : [FieldType.PHONE_COUNTRY_CODE, FieldType.PHONE_NUMBER]
+            newFieldType = [FieldType.PHONE_COUNTRY_CODE, FieldType.PHONE_NUMBER]
             setEventType(EventType.TypeInputMobile);
         }
         setFieldType([...newFieldType]);

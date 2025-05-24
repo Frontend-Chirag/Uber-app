@@ -55,7 +55,6 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
     const {
         flowType,
         fieldType,
-        role,
         inAuthSessionId,
         screenType,
         eventType,
@@ -76,7 +75,7 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
         (screenType === ScreenType.EMAIL_ADDRESS_PROGESSIVE ||
             screenType === ScreenType.PHONE_NUMBER_INITIAL);
 
-    const { mutateAsync } = useAuth(role)
+    const { mutateAsync } = useAuth()
 
 
     const [timeLeft, setTimeLeft] = useState(OTP_RESEND_TIMEOUT);
@@ -180,7 +179,7 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
             form.reset();
             setIsLoadingNextScreen(false);
         }
-    }, [flowType, screenType, eventType, inAuthSessionId, role, setIsLoadingNextScreen, setFlowType, setScreenType, setFieldType, setHintValue, setEventType, setInAuthSessionId, form, mutateAsync]);
+    }, [flowType, screenType, eventType, inAuthSessionId,  setIsLoadingNextScreen, setFlowType, setScreenType, setFieldType, setHintValue, setEventType, setInAuthSessionId, form, mutateAsync]);
 
     return (
         <FormProvider {...form}>

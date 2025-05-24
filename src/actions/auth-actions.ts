@@ -11,9 +11,8 @@ import { AuthAdminService } from "@/services/admin/admin-auth-service";
 const authService = await AuthService.getInstance();
 const adminAuthService = await AuthAdminService.getInstance();
 
-export async function submit(req: AuthRequest, role: Role): Promise<AuthResponse> {
+export async function submit(req: AuthRequest): Promise<AuthResponse> {
     try {
-        console.log("role submit ", role);
 
         // Validate request data
         const validateResult = AuthSchema.parse(req.json);
@@ -21,17 +20,13 @@ export async function submit(req: AuthRequest, role: Role): Promise<AuthResponse
             return authService.handleError('Invalid field data value');
         }
 
-        if (role !== 'super_admin') {
-            // Handle regular user authentication
-            return handleUserSubmit(validateResult, role);
-        }
+            return handleUserSubmit(validateResult);
 
-        // Handle admin authentication
-        return handleAdminSubmit(validateResult);
+      
 
     } catch (error) {
-        const errorPrefix = role === 'super_admin' ? 'Admin Authentication Error' : 'Authentication Error';
-        const service = role === 'super_admin' ? adminAuthService : authService;
+        const errorPrefix =  'Authentication Error';
+        const service =  authService;
         return service.handleError(error instanceof Error ? `${errorPrefix}: ${error.message}` : 'Internal server error');
     }
 }
@@ -64,7 +59,7 @@ async function handleAdminSubmit(validatedData: any): Promise<AuthResponse> {
 }
 
 // Helper function for regular user authentication
-async function handleUserSubmit(validatedData: any, role: Role): Promise<AuthResponse> {
+async function handleUserSubmit(validatedData: any): Promise<AuthResponse> {
     const {
         flowType,
         inAuthSessionId,
@@ -84,7 +79,6 @@ async function handleUserSubmit(validatedData: any, role: Role): Promise<AuthRes
         {
             fieldAnswers,
             sessionId
-        },
-        role
+        }
     );
 }

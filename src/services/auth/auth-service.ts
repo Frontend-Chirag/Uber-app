@@ -87,7 +87,7 @@ export class AuthService {
     }
 
     // Main flow handler
-    public async handleAuth(flow: FlowType, screen: ScreenType, event: EventType, props: AuthServiceProps, role: Role): Promise<AuthResponse> {
+    public async handleAuth(flow: FlowType, screen: ScreenType, event: EventType, props: AuthServiceProps,): Promise<AuthResponse> {
         try {
             const { fieldAnswers, sessionId } = props;
             const headersList = await headers();
@@ -114,7 +114,6 @@ export class AuthService {
                 phonenumber: "",
                 firstname: "",
                 lastname: "",
-                role,
                 isVerifiedEmail: false,
                 isVerifiedPhonenumber: false,
                 otp: {
@@ -304,7 +303,7 @@ export class AuthService {
     public async handleVerifyEmailOtp({ fieldAnswers, sessionId }: AuthServiceProps): Promise<AuthResponse> {
         try {
 
-            const session = userSession.getSession(sessionId);
+            const session = userSession.getSession(sessionId, null, null);
 
             if (!session) {
                 return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND)
