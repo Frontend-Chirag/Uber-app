@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 import { generateTokens } from "@/lib/auth";
 import { cookies, headers } from "next/headers";
 import { FlowType, ScreenType, EventType, FieldType } from "@/types";
-import { AUTH_ERRORS, AuthResponse, AuthServiceProps } from "../auth/type";
+import { AUTH_ERRORS, AuthResponse, AuthServiceProps } from "../../api/auth/type";
 import { AuthResponseBuilder } from "@/lib/config/response-builder";
 import { Admin } from "@prisma/client";
 import { findEnumKey } from "@/lib/utils";

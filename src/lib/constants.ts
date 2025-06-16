@@ -76,7 +76,40 @@ export const PrivateLinks = [
     },
 ] as const;
 
-export const HTTP_STATUS = {
+
+export const HTTP_ERRORS = {
+    INVALID_EMAIL_OTP: 'Invalid email OTP',
+    INVALID_PHONE_OTP: 'Invalid phone OTP',
+    IP_NOT_FOUND: 'IP not found',
+    USER_NOT_FOUND: 'User not found',
+    INVALID_TOKEN: 'Invalid token',
+    INVALID_CSRF_TOKEN: 'Invalid CSRF token',
+    RATE_LIMIT_EXCEEDED: 'Rate limit exceeded',
+    IP_BLOCKED: 'IP blocked',
+    INTERNAL_SERVER_ERROR: 'Internal server error',
+    MISSING_REQUIRED_FIELDS: 'Missing required fields',
+    INVALID_FLOW_OR_SCREEN_TYPE: 'Invalid flow or screen type',
+    TOO_MANY_REQUESTS: 'Too many requests',
+    BAD_REQUEST: 'Bad request',
+    UNAUTHORIZED: 'Unauthorized',
+    FORBIDDEN: 'Forbidden',
+    NOT_FOUND: 'Not found',
+} as const;
+
+
+export const HTTP_SUCCESS = {
+    LOGIN: "Successfully logged in",
+    SIGNUP: "Successfully signed up",
+    LOGOUT: "Successfully logged out",
+    EMAIL_VERIFIED: "Email verified successfully",
+    PHONE_VERIFIED: "Phone verified successfully",
+    TOO_MANY_REQUESTS: 'Too many requests'
+} as const; 
+
+
+
+
+export const HTTP_STATUS: Record<string, number> = {
     OK: 200,
     BAD_REQUEST: 400,
     UNAUTHORIZED: 401,

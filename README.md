@@ -1,36 +1,140 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Multi-Tenant Uber-like Application
+
+## Overview
+This application is a multi-tenant ride-sharing platform that allows different organizations (tenants) to operate their own ride-sharing services while sharing the same infrastructure. Each tenant can have their own drivers, riders, and business rules while maintaining data isolation.
+
+## Multi-Tenancy Benefits
+
+1. **Cost Efficiency**
+   - Shared infrastructure reduces operational costs
+   - Economies of scale in maintenance and updates
+   - Reduced development time for new tenants
+
+2. **Data Isolation**
+   - Each tenant's data is completely separated
+   - Enhanced security and privacy
+   - Compliance with data protection regulations
+
+3. **Customization**
+   - Tenant-specific branding and UI
+   - Custom business rules and pricing
+   - Flexible feature sets per tenant
+
+4. **Scalability**
+   - Easy addition of new tenants
+   - Independent scaling of tenant resources
+   - Efficient resource utilization
+
+## Architecture Changes
+
+### 1. Tenant Model
+```prisma
+model Tenant {
+    id            String   @id @default(auto()) @map("_id") @db.ObjectId
+    name          String
+    domain        String   @unique
+    logo          String?
+    theme         Json?    // Custom theme configuration
+    settings      Json?    // Tenant-specific settings
+    isActive      Boolean  @default(true)
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+}
+```
+
+### 2. User Model Changes
+- Removed `role` field from User model
+- Added `tenantId` to associate users with specific tenants
+- Users can now be both riders and drivers within the same tenant
+
+### 3. Driver and Rider Models
+- Added `tenantId` to both models
+- Maintained separate collections for better data isolation
+- Added tenant-specific configurations
+
+## Implementation Details
+
+### 1. Tenant Identification
+- Subdomain-based routing (e.g., tenant1.yourapp.com)
+- Custom domain support
+- Tenant context middleware
+
+### 2. Data Isolation
+- Database-level tenant filtering
+- Row-level security
+- Tenant-specific indexes
+
+### 3. Authentication & Authorization
+- Tenant-aware authentication
+- Role-based access control within tenants
+- Cross-tenant access restrictions
+
+### 4. API Changes
+- All endpoints now require tenant context
+- Tenant-specific rate limiting
+- Tenant-aware caching
 
 ## Getting Started
 
-First, run the development server:
+1. **Environment Setup**
+   ```bash
+   # Required environment variables
+   DATABASE_URL=your_mongodb_url
+   DIRECT_DATABASE_URL=your_direct_mongodb_url
+   JWT_SECRET=your_jwt_secret
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+2. **Database Migration**
+   ```bash
+   npx prisma migrate dev
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. **Running the Application**
+   ```bash
+   npm run dev
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Best Practices
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Tenant Management**
+   - Implement tenant provisioning process
+   - Regular tenant health checks
+   - Tenant-specific monitoring
 
-## Learn More
+2. **Security**
+   - Strict tenant isolation
+   - Regular security audits
+   - Tenant-specific security policies
 
-To learn more about Next.js, take a look at the following resources:
+3. **Performance**
+   - Tenant-aware caching
+   - Efficient query optimization
+   - Resource usage monitoring
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. **Maintenance**
+   - Regular database maintenance
+   - Tenant-specific backups
+   - Version control for tenant configurations
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Future Enhancements
 
-## Deploy on Vercel
+1. **Tenant Analytics**
+   - Tenant-specific dashboards
+   - Performance metrics
+   - Usage statistics
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **Customization Options**
+   - Tenant-specific features
+   - Custom workflows
+   - Branding options
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. **Integration Capabilities**
+   - Tenant-specific APIs
+   - Third-party integrations
+   - Custom webhooks
+
+## Contributing
+Please read our contributing guidelines before submitting pull requests.
+
+## License
+This project is licensed under the MIT License.

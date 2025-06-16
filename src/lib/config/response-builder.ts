@@ -1,5 +1,7 @@
 import { EventType, FlowType, ScreenType } from "@/types";
 import { Admin, User } from "@prisma/client";
+import { HonoRequest } from "hono/request";
+
 
 
 export interface Fields {
@@ -25,14 +27,11 @@ export interface AuthResponseForm {
 }
 
 
-export class AuthResponseBuilder {
+export class ResponseBuilder  {
     private response: {
         status: number;
         error?: string;
         success: boolean;
-        user?: User | Admin;
-        form?: AuthResponseForm;
-        redirectUrl?: string;
         message?: string
     };
 
@@ -53,21 +52,6 @@ export class AuthResponseBuilder {
 
     setSuccess(success: boolean) {
         this.response.success = success;
-        return this;
-    }
-
-    setUser(user: User | Admin) {
-        this.response.user = user;
-        return this;
-    }
-
-    setForm(formdata: AuthResponseForm) {
-        this.response.form = formdata;
-        return this;
-    }
-
-    setRedirect(url: string) {
-        this.response.redirectUrl = url;
         return this;
     }
 

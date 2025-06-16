@@ -1,34 +1,39 @@
 import { submit } from "@/actions/auth-actions";
-import { AuthRequest, AuthResponse } from "@/services/auth/type";
 import { Role } from "@prisma/client";
+import { client } from '@/server/rpc/hono-client';
+import { InferRequestType, InferResponseType } from 'hono';
 import { useMutation } from "@tanstack/react-query"
 import { toast } from "sonner";
-import {useRouter} from 'next/navigation'
+import { useRouter } from 'next/navigation'
+
+
+type AuthRequest = InferRequestType<typeof client.api.auth.submit.$post>;
+type AuthResponse = InferResponseType<typeof client.api.auth.submit.$post>;
 
 
 export const useAuth = () => {
     const router = useRouter();
     const mutation = useMutation<AuthResponse, Error, AuthRequest>({
-        mutationFn: async (req) => {
-            const response = await submit(req);
+        mutationFn: async ({ json }) => {
+            const response = await client.api.auth.submit.$post({ json });
 
-            if (response.error) {
-                throw new Error(response.error)
+            if (!response.ok) {
+                throw new Error(response.statusText, { cause: await response.json() })
             };
 
-            console.log('response', response)
+            if (response.redirect) {
+                router.replace(`/${response.redirect}`)
+            }
 
-            return response;
+            return await response.json() as AuthResponse;
         },
         onError: (error) => {
-            toast.error('Something went wrong, try again');
             console.log(error);
+            toast.error(error.message || 'Something went wrong, try again');
+             
         },
         onSuccess: (data) => {
-            toast.success(data.message);
-            if(data.redirectUrl){
-              router.replace(`/${data.redirectUrl}`)
-            }
+            
         }
     });
 
