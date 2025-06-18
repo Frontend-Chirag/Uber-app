@@ -1,3 +1,4 @@
+import { ContentfulStatusCode } from "hono/utils/http-status";
 import { LucideCarFront, LucidePackage } from "lucide-react";
 import { FaShuttleVan } from "react-icons/fa";
 import { MdCarRental } from 'react-icons/md';
@@ -109,13 +110,14 @@ export const HTTP_SUCCESS = {
 
 
 
-export const HTTP_STATUS: Record<string, number> = {
+export const HTTP_STATUS: Record<string, ContentfulStatusCode> = {
     OK: 200,
     BAD_REQUEST: 400,
     UNAUTHORIZED: 401,
     FORBIDDEN: 403,
     NOT_FOUND: 404,
     TOO_MANY_REQUESTS: 429,
-    INTERNAL_SERVER_ERROR: 500
+    INTERNAL_SERVER_ERROR: 500,
+    REDIRECT: 302
 } as const;
 

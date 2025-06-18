@@ -160,7 +160,7 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
                 }
             });
 
-            if (response.success && response.form) {
+            if (!response.error && response.form) {
                 const { inAuthSessionId, flowType, screens: { eventType, fields, screenType } } = response.form;
 
                 setInAuthSessionId(inAuthSessionId);
@@ -179,7 +179,7 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
             form.reset();
             setIsLoadingNextScreen(false);
         }
-    }, [flowType, screenType, eventType, inAuthSessionId,  setIsLoadingNextScreen, setFlowType, setScreenType, setFieldType, setHintValue, setEventType, setInAuthSessionId, form, mutateAsync]);
+    }, [flowType, screenType, eventType, inAuthSessionId, setIsLoadingNextScreen, setFlowType, setScreenType, setFieldType, setHintValue, setEventType, setInAuthSessionId, form, mutateAsync]);
 
     return (
         <FormProvider {...form}>

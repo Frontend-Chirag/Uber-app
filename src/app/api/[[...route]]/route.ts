@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { handle } from 'hono/vercel'
 import authApi from '@/server/api/auth-api'
 
-export const runtime = 'edge'
+
 
 const app = new Hono().basePath('/api')
 

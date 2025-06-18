@@ -10,10 +10,12 @@ import {
 } from "./type";
 import { HTTP_ERRORS, HTTP_STATUS, HTTP_SUCCESS } from "@/lib/constants";
 import { getSessionManager } from "../../services/session/session-service";
-import { Context } from "hono";
+import { } from "hono";
 import { AuthSchema } from "@/validators/validate-server";
 import { z } from "zod";
-import { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
+import { AuthResponseBuilder, AuthResponse } from "../response-builder";
+import { ContentfulStatusCode } from "hono/utils/http-status";
+
 
 
 const userSession = getSessionManager('USER');
@@ -22,7 +24,6 @@ const userSession = getSessionManager('USER');
 interface AuthHandlersProps {
     fieldAnswers: FieldAnswers[];
     sessionId: string;
-    ctx: Context;
 }
 
 interface AuthHandler {
@@ -31,12 +32,11 @@ interface AuthHandler {
     event: EventType;
     fieldAnswers: FieldAnswers[];
     sessionId: string;
-    ctx: Context;
 }
 
 type HandlerFunction = (
     props: AuthHandlersProps
-) => Promise<Response>;
+) => Promise<AuthResponse>;
 
 type EventHandlers = Partial<Record<EventType, HandlerFunction>>;
 type ScreenHandlers = Partial<Record<ScreenType, EventHandlers>>;
@@ -48,7 +48,14 @@ type FieldAnswers = z.infer<typeof AuthSchema>['screenAnswers']['fieldAnswers'][
 export class AuthService {
     private static instance: AuthService;
     private handlers: FlowHandlers;
-    private cookieStore: Promise<ReadonlyRequestCookies> = cookies();
+    private response: AuthResponseBuilder = new AuthResponseBuilder();
+    private redirectLinks = {
+        SIGN_UP: '/signup',
+        LOGIN: '/login',
+        HOME: '/',
+        RIDER_DASBOARD: '/dashboard/rider'
+    }
+
 
     private constructor() {
         this.handlers = {
@@ -109,25 +116,12 @@ export class AuthService {
     }
 
     // Main flow handler
-    public async handleAuth(props: AuthHandler): Promise<Response> {
+    public async handleAuth(props: AuthHandler): Promise<AuthResponse> {
         try {
-            const { flow, screen, event, fieldAnswers, sessionId, ctx } = props;
+            const { flow, screen, event, fieldAnswers, sessionId } = props;
             const headersList = await headers();
             const forwardedFor = headersList.get('x-forwarded-for');
             const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown';
-
-            console.log('Handler Ip:', ip)
-
-            if (!(await userSession.checkRateLimit(ip))) {
-                return this.handleError(HTTP_ERRORS.TOO_MANY_REQUESTS, ctx, HTTP_STATUS.TOO_MANY_REQUESTS);
-            }
-
-            if (!props.sessionId && !(await userSession.checkSessionLimit(ip))) {
-                return this.handleError(HTTP_ERRORS.TOO_MANY_REQUESTS, ctx, HTTP_STATUS.TOO_MANY_REQUESTS);
-            }       
-
-            await userSession.cleanupExpiredSessions();
-            await userSession.cleanupRateLimits();
 
             const state = userSession.createSession(props.sessionId, {
                 flowType: FlowType.INITIAL,
@@ -143,32 +137,36 @@ export class AuthService {
                     expiresAt: 0
                 },
                 eventType: undefined
-            }
-                , ip);
+            }, ip);
+
 
             if (!state) {
-                return this.handleError(HTTP_ERRORS.INTERNAL_SERVER_ERROR, ctx, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+                return this.handleError(HTTP_ERRORS.INTERNAL_SERVER_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR, this.redirectLinks.HOME);
             }
 
             const handler = this.handlers[flow]?.[screen]?.[event];
 
             if (!handler) {
-                return this.handleError(HTTP_ERRORS.INVALID_FLOW_OR_SCREEN_TYPE, ctx, HTTP_STATUS.BAD_REQUEST);
+                return this.response
+                    .setError('Something went wrong, try again')
+                    .setRedirectUrl(this.redirectLinks.HOME)
+                    .setSuccess(false)
+                    .setStatus(HTTP_STATUS.BAD_REQUEST)
+                    .build();
             }
 
-            return await handler({ fieldAnswers, sessionId, ctx });
+            return await handler({ fieldAnswers, sessionId });
         } catch (error) {
-            return this.handleError(error, props.ctx);
+            console.error('Auth error:', error);
+            return this.handleError();
         }
     }
 
     // Core Authentication Methods
-    public async login(userId: string, sessionId: string, ctx: Context): Promise<Response> {
+    public async login(userId: string, sessionId: string): Promise<AuthResponse> {
         try {
             const headersList = await headers();
-            const protocol = headersList.get("x-forwarded-proto") || 'http';
-            const host = headersList.get("host");
-            const fullUrl = `${protocol}://${host}`;
+            const cookieStore = await cookies();
 
             // Get device info
             const userAgent = headersList.get('user-agent') || 'unknown';
@@ -178,7 +176,7 @@ export class AuthService {
             const session = await db.session.create({
                 data: {
                     user: {
-                        connect: { id: userId } 
+                        connect: { id: userId }
                     },
                     ip,
                     device: userAgent,
@@ -186,45 +184,56 @@ export class AuthService {
                 }
             });
 
-            (await this.cookieStore).set('sessionId', session.sessionId);
+            cookieStore.set('sessionId', session.sessionId);
             userSession.deleteSession(sessionId);
 
-            return ctx.redirect(`${fullUrl}/dashboard/${Role.rider}`, 302 );
+            return this.response
+                .setRedirectUrl(this.redirectLinks.RIDER_DASBOARD)
+                .setStatus(HTTP_STATUS.REDIRECT)
+                .build();
         } catch (error) {
-            return this.handleError(error, ctx);
+            console.log(error)
+            return this.handleError();
         }
     }
 
     // Logout
-    public async logout(ctx: Context): Promise<Response> {
+    public async logout(): Promise<AuthResponse> {
         try {
-            const sessionId = (await this.cookieStore).get('sessionId');
+            const cookieStore = await cookies();
+            const sessionId = cookieStore.get('sessionId');
 
             if (sessionId) {
                 // Delete session from database
                 await db.session.delete({
-                    where: { 
+                    where: {
                         sessionId: sessionId.value!
-                     }
+                    }
                 });
 
                 // Clear session cookie
-                (await this.cookieStore).delete('sessionId');
+                cookieStore.delete('sessionId');
             }
 
-            return ctx.redirect('/');
+            return this.response
+                .setRedirectUrl(this.redirectLinks.LOGIN)
+                .setStatus(HTTP_STATUS.REDIRECT)
+                .build();
         } catch (error) {
-            return this.handleError(HTTP_ERRORS.INTERNAL_SERVER_ERROR, ctx);
+            console.log(error)
+            return this.handleError();
         }
     }
 
+
     // Email Verification HandlerFunction
-    public async handleEmailVerification({ fieldAnswers, sessionId, ctx }: AuthHandlersProps): Promise<Response> {
+    public async handleEmailVerification({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
         try {
             const email = fieldAnswers[0].emailAddress as string;
             const existingUser = await db.user.findUnique({ where: { email } });
             const eventType = existingUser ? EventType.TypeInputExistingEmail : EventType.TypeEmailOTP;
             const otp = await sendOTPEmail({ email });
+
             // Update state
             const session = userSession.updateSession(sessionId, {
                 email,
@@ -232,42 +241,48 @@ export class AuthService {
                 otp,
                 eventType
             });
+
             if (!session) {
-                return this.handleError('Session not found or expired', ctx, HTTP_STATUS.NOT_FOUND);
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND);
             }
             const { data } = session;
-            return ctx.json({
-                flowType: data.flowType,
-                screens: {
-                    screenType: ScreenType.EMAIL_OTP_CODE,
-                    fields: [{
-                        fieldType: findEnumKey(FieldType.EMAIL_OTP_CODE)!,
-                        hintValue: data.email,
-                        otpWidth: otp.value.length,
-                        profileHint: existingUser ? {
-                            firstname: existingUser?.firstname || '',
-                            lastname: existingUser?.lastname || '',
-                            phonenumber: existingUser?.phonenumber || '',
-                            email: existingUser?.email || '',
-                        } : null
-                    }],
-                    eventType
-                },
-                inAuthSessionId: sessionId,
-            }, 200);
+
+            return this.response
+                .setForm({
+                    flowType: data.flowType,
+                    screens: {
+                        screenType: ScreenType.EMAIL_OTP_CODE,
+                        fields: [{
+                            fieldType: findEnumKey(FieldType.EMAIL_OTP_CODE)!,
+                            hintValue: data.email,
+                            otpWidth: otp.value.length,
+                            profileHint: existingUser ? {
+                                firstname: existingUser?.firstname || '',
+                                lastname: existingUser?.lastname || '',
+                                phonenumber: existingUser?.phonenumber || '',
+                                email: existingUser?.email || '',
+                            } : null
+                        }],
+                        eventType
+                    },
+                    inAuthSessionId: sessionId,
+                })
+                .setStatus(HTTP_STATUS.OK)
+                .build();
         } catch (error) {
-            return this.handleError(error, ctx);
+            return this.handleError(error,);
         }
     }
 
     // Phone Verification
-    public async handlePhoneVerification({ fieldAnswers, sessionId, ctx }: AuthHandlersProps): Promise<Response> {
+    public async handlePhoneVerification({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
         try {
             const phoneCountryCode = fieldAnswers[0].phoneCountryCode as string;
             const phonenumber = fieldAnswers[1].phoneNumber as string;
             const existingUser = await db.user.findUnique({ where: { phonenumber, phoneCountryCode } });
             const eventType = existingUser ? EventType.TypeInputExistingPhone : EventType.TypeSMSOTP;
             const otp = await sendSMSMobile({ phonenumber, phoneCountryCode });
+
             // Update state
             const session = userSession.updateSession(sessionId, {
                 phonenumber,
@@ -276,126 +291,157 @@ export class AuthService {
                 otp,
                 eventType
             });
+
             if (!session) {
-                return this.handleError('Session not found or expired', ctx, HTTP_STATUS.NOT_FOUND);
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, '/signup');
             }
+
             const { data } = session;
-            return ctx.json({
-                flowType: data.flowType,
-                screens: {
-                    screenType: ScreenType.PHONE_OTP,
-                    fields: [{
-                        fieldType: findEnumKey(FieldType.PHONE_SMS_OTP)!,
-                        hintValue: data.phonenumber,
-                        otpWidth: otp.value.length,
-                        profileHint: existingUser ? {
-                            firstname: existingUser?.firstname || '',
-                            lastname: existingUser?.lastname || '',
-                            phonenumber: existingUser?.phonenumber || '',
-                            email: existingUser?.email || '',
-                        } : null
-                    }],
-                    eventType
-                },
-                inAuthSessionId: sessionId,
-            }, 200);
+
+            return this.response
+                .setForm({
+                    flowType: data.flowType,
+                    screens: {
+                        screenType: ScreenType.PHONE_OTP,
+                        fields: [{
+                            fieldType: findEnumKey(FieldType.PHONE_SMS_OTP)!,
+                            hintValue: data.phonenumber,
+                            otpWidth: otp.value.length,
+                            profileHint: existingUser ? {
+                                firstname: existingUser?.firstname || '',
+                                lastname: existingUser?.lastname || '',
+                                phonenumber: existingUser?.phonenumber || '',
+                                email: existingUser?.email || '',
+                            } : null
+                        }],
+                        eventType
+                    },
+                    inAuthSessionId: sessionId,
+                })
+                .setStatus(HTTP_STATUS.OK)
+                .build();
         } catch (error) {
-            return this.handleError(error, ctx);
+            console.log(error)
+            return this.handleError();
         }
     }
 
     // OTP Verification
-    public async handleVerifyEmailOtp({ fieldAnswers, sessionId, ctx }: AuthHandlersProps): Promise<Response> {
+    public async handleVerifyEmailOtp({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
         try {
             const session = userSession.getSession(sessionId, null, null);
+
             if (!session) {
-                return this.handleError('Session not found or expired', ctx, HTTP_STATUS.NOT_FOUND);
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, '/signup');
             }
+
             const { data: userState } = session;
+
             const otpCode = fieldAnswers[0].emailOTPCode as string;
+
             if (userState?.otp?.value !== otpCode) {
-                return this.handleError(HTTP_ERRORS.INVALID_EMAIL_OTP, ctx, HTTP_STATUS.UNAUTHORIZED);
+                return this.handleError(HTTP_ERRORS.INVALID_EMAIL_OTP, HTTP_STATUS.UNAUTHORIZED);
             }
+
             if (userState?.eventType === EventType.TypeInputExistingEmail && userState.email) {
                 const user = await db.user.findUnique({ where: { email: userState.email } });
-                if (user) return await this.login(user.id, sessionId, ctx);
+                if (user) return await this.login(user.id, sessionId,);
             }
+
             const updatedSession = userSession.updateSession(sessionId, {
                 isVerifiedEmail: true,
                 flowType: FlowType.PROGRESSIVE_SIGN_UP,
                 otp: { value: '', expiresAt: 0 }
             });
-            return this.handleConditionalResponse(sessionId, updatedSession?.data!, ctx);
+
+            return this.handleConditionalResponse(sessionId, updatedSession?.data!);
         } catch (error) {
-            return this.handleError(error, ctx);
+            console.log('', error)
+            return this.handleError(error,);
         }
     }
 
     // Phone OTP Verification
-    public async handleVerifyPhoneOtp({ fieldAnswers, sessionId, ctx }: AuthHandlersProps): Promise<Response> {
+    public async handleVerifyPhoneOtp({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
         try {
             const session = userSession.getSession(sessionId, null, null);
             if (!session) {
-                return this.handleError('Session not found or expired', ctx, HTTP_STATUS.NOT_FOUND);
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, '/signup');
             }
             const { data: userState } = session;
-            const otpCode = fieldAnswers[0].phoneOTPCode! as string;
+
+            const otpCode = fieldAnswers[0].phoneOTPCode as string;
+
             if (userState?.otp?.value !== otpCode) {
-                return this.handleError(HTTP_ERRORS.INVALID_PHONE_OTP, ctx, HTTP_STATUS.UNAUTHORIZED);
+                return this.handleError(HTTP_ERRORS.INVALID_PHONE_OTP, HTTP_STATUS.UNAUTHORIZED);
             }
+
             if (userState?.eventType === EventType.TypeInputExistingPhone && userState.phonenumber) {
+
                 const user = await db.user.findUnique({
                     where: {
                         phonenumber: userState.phonenumber,
                         phoneCountryCode: userState.phoneCountryCode
                     }
                 });
-                if (user) return await this.login(user.id, sessionId, ctx);
+
+                if (user) return await this.login(user.id, sessionId,);
             }
+
             const updatedSession = userSession.updateSession(sessionId, {
                 isVerifiedPhonenumber: true,
                 flowType: FlowType.PROGRESSIVE_SIGN_UP,
                 otp: { value: '', expiresAt: 0 }
             });
-            return this.handleConditionalResponse(sessionId, updatedSession?.data!, ctx);
+
+            return this.handleConditionalResponse(sessionId, updatedSession?.data!);
         } catch (error) {
-            return this.handleError(error, ctx);
+            console.log('', error)
+            return this.handleError();
         }
     }
 
     // User Details
-    public async handleInputDetails({ fieldAnswers, sessionId, ctx }: AuthHandlersProps): Promise<Response> {
+    public async handleInputDetails({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
         try {
             const details = {
                 firstname: fieldAnswers[0].firstName as string,
                 lastname: fieldAnswers[1].lastName as string
             };
+
             userSession.updateSession(sessionId, details);
-            return ctx.json({
-                flowType: FlowType.FINAL_SIGN_UP,
-                screens: {
-                    screenType: ScreenType.AGREE_TERMS_AND_CONDITIONS,
-                    fields: [{
-                        fieldType: findEnumKey(FieldType.AGREE_TERMS_AND_CONDITIONS)!
-                    }],
-                    eventType: EventType.TypeCheckBox,
-                },
-                inAuthSessionId: sessionId
-            }, 200);
+
+            return this.response
+                .setForm({
+                    flowType: FlowType.FINAL_SIGN_UP,
+                    screens: {
+                        screenType: ScreenType.AGREE_TERMS_AND_CONDITIONS,
+                        fields: [{
+                            fieldType: findEnumKey(FieldType.AGREE_TERMS_AND_CONDITIONS)!
+                        }],
+                        eventType: EventType.TypeCheckBox,
+                    },
+                    inAuthSessionId: sessionId
+                })
+                .setStatus(HTTP_STATUS.OK)
+                .build();
         } catch (error) {
-            return this.handleError(error, ctx);
+            console.log(, error)
+            return this.handleError();
         }
     }
 
-    public async handleCreateAccount({ sessionId, ctx }: AuthHandlersProps): Promise<Response> {
+    public async handleCreateAccount({ sessionId }: AuthHandlersProps): Promise<AuthResponse> {
         try {
             const session = userSession.getSession(sessionId, null, null);
-            const headerList = await headers();
-            const userAgent = headerList.get('user-agent') || 'unknown';
-            const ip = headerList.get('x-forwarded-for') || '127.0.0.1';
+            const headersList = await headers();
+            const userAgent = headersList.get('user-agent') || 'unknown';
+            const ip = headersList.get('x-forwarded-for') || '127.0.0.1';
+
             if (!session) {
-                return this.handleError('Session not found or expired', ctx, HTTP_STATUS.NOT_FOUND);
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, '/signup');
             }
+
             const { data: {
                 email,
                 phoneCountryCode,
@@ -405,6 +451,7 @@ export class AuthService {
                 isVerifiedEmail,
                 isVerifiedPhonenumber,
             } } = session;
+
             const user = await db.user.create({
                 data: {
                     email,
@@ -427,68 +474,86 @@ export class AuthService {
                     Session: true
                 }
             });
+
             if (user.Session) {
-                (await this.cookieStore).set('sessionId', user.Session.sessionId);
+                cookieStore.set('sessionId', user.Session.sessionId);
             }
-            return ctx.redirect(`/${user.role}`);
+
+            return this.response
+                .setRedirectUrl(`/${user.role}`)
+                .setStatus(HTTP_STATUS.ok)
+                .build();
         } catch (error) {
-            return this.handleError(error, ctx);
+            console.log(error);
+            return this.handleError();
         }
     }
 
     // Condition Based response
-    private handleConditionalResponse(inAuthSessionId: string, data: ConditionalResponseData, ctx: Context): Response {
+    private handleConditionalResponse(inAuthSessionId: string, data: ConditionalResponseData): AuthResponse {
         if (data.isVerifiedEmail && data.isVerifiedPhonenumber) {
-            return ctx.json({
-                flowType: FlowType.PROGRESSIVE_SIGN_UP,
-                screens: {
-                    screenType: ScreenType.FIRST_NAME_LAST_NAME,
-                    fields: [
-                        { fieldType: findEnumKey(FieldType.FIRST_NAME)! },
-                        { fieldType: findEnumKey(FieldType.LAST_NAME)! },
-                    ],
-                    eventType: EventType.TypeInputDetails,
-                },
-                inAuthSessionId
-            }, 200);
+            return this.response
+                .setForm({
+                    flowType: FlowType.PROGRESSIVE_SIGN_UP,
+                    screens: {
+                        screenType: ScreenType.FIRST_NAME_LAST_NAME,
+                        fields: [
+                            { fieldType: findEnumKey(FieldType.FIRST_NAME)! },
+                            { fieldType: findEnumKey(FieldType.LAST_NAME)! },
+                        ],
+                        eventType: EventType.TypeInputDetails,
+                    },
+                    inAuthSessionId
+                })
+                .setStatus(HTTP_STATUS.OK)
+                .build();
         }
         if (!data.isVerifiedEmail) {
-            return ctx.json({
+            return this.response
+                .setForm({
+                    flowType: FlowType.PROGRESSIVE_SIGN_UP,
+                    screens: {
+                        screenType: ScreenType.EMAIL_ADDRESS_PROGESSIVE,
+                        fields: [
+                            {
+                                fieldType: findEnumKey(FieldType.EMAIL_ADDRESS)!,
+                                hintValue: data.email!,
+                                otpWidth: data.otp?.value?.length
+                            }
+                        ],
+                        eventType: EventType.TypeInputEmail,
+                    },
+                    inAuthSessionId
+                })
+                .setStatus(HTTP_STATUS.OK)
+                .build();;
+        }
+        return this.response
+            .setForm({
                 flowType: FlowType.PROGRESSIVE_SIGN_UP,
                 screens: {
-                    screenType: ScreenType.EMAIL_ADDRESS_PROGESSIVE,
+                    screenType: ScreenType.PHONE_NUMBER_PROGRESSIVE,
                     fields: [
-                        {
-                            fieldType: findEnumKey(FieldType.EMAIL_ADDRESS)!,
-                            hintValue: data.email!,
-                            otpWidth: data.otp?.value?.length
-                        }
+                        { fieldType: findEnumKey(FieldType.PHONE_COUNTRY_CODE)!, hintValue: data.phoneCountryCode! },
+                        { fieldType: findEnumKey(FieldType.PHONE_NUMBER)!, hintValue: data.phonenumber!, otpWidth: data.otp?.value?.length },
                     ],
-                    eventType: EventType.TypeInputEmail,
+                    eventType: EventType.TypeInputMobile,
                 },
                 inAuthSessionId
-            }, 200);
-        }
-        return ctx.json({
-            flowType: FlowType.PROGRESSIVE_SIGN_UP,
-            screens: {
-                screenType: ScreenType.PHONE_NUMBER_PROGRESSIVE,
-                fields: [
-                    { fieldType: findEnumKey(FieldType.PHONE_COUNTRY_CODE)!, hintValue: data.phoneCountryCode! },
-                    { fieldType: findEnumKey(FieldType.PHONE_NUMBER)!, hintValue: data.phonenumber!, otpWidth: data.otp?.value?.length },
-                ],
-                eventType: EventType.TypeInputMobile,
-            },
-            inAuthSessionId
-        }, 200);
+            })
+            .setStatus(HTTP_STATUS.OK)
+            .build();;
     }
 
     // Error handler
-    public handleError(error: unknown, ctx: Context, statusCode: number = 500): Response {
-        const errorMessage = error instanceof Error
-            ? error.message
-            : HTTP_ERRORS.INTERNAL_SERVER_ERROR;
-        return ctx.json({ success: false, error: errorMessage }, statusCode.toString() as any);
+    public handleError(error: unknown = HTTP_ERRORS.INTERNAL_SERVER_ERROR, statusCode: ContentfulStatusCode = HTTP_STATUS.INTERNAL_SERVER_ERROR, redirectUrl: string = ''): AuthResponse {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return this.response
+            .setStatus(statusCode)
+            .setError(errorMessage)
+            .setSuccess(false)
+            .setRedirectUrl(redirectUrl)
+            .build();
     }
 };
 
