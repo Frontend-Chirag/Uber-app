@@ -120,10 +120,21 @@ export class AuthService {
         try {
             const { flow, screen, event, fieldAnswers, sessionId } = props;
             const headersList = await headers();
-            const forwardedFor = headersList.get('x-forwarded-for');
-            const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown';
+            const user_agent = headersList.get('user-agent') || ''
 
-            const state = userSession.createSession(props.sessionId, {
+
+            if ((await userSession.checkRateLimit(user_agent))) {
+                return this.handleError("Too many requests", HTTP_STATUS.TOO_MANY_REQUESTS);
+            }
+
+            if (!props.sessionId && !(await userSession.checkSessionLimit(user_agent))) {
+                return this.handleError('Maximum number of sessions reached.', HTTP_STATUS.TOO_MANY_REQUESTS);
+            }
+
+            await userSession.cleanupExpiredSessions();
+            await userSession.cleanupRateLimits();
+
+            const state = userSession.getSession(props.sessionId, {
                 flowType: FlowType.INITIAL,
                 email: "",
                 phoneCountryCode: "",
@@ -137,8 +148,7 @@ export class AuthService {
                     expiresAt: 0
                 },
                 eventType: undefined
-            }, ip);
-
+            }, user_agent);
 
             if (!state) {
                 return this.handleError(HTTP_ERRORS.INTERNAL_SERVER_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR, this.redirectLinks.HOME);
@@ -192,7 +202,7 @@ export class AuthService {
                 .setStatus(HTTP_STATUS.REDIRECT)
                 .build();
         } catch (error) {
-            console.log(error)
+            console.log('Login Error:', error)
             return this.handleError();
         }
     }
@@ -220,7 +230,7 @@ export class AuthService {
                 .setStatus(HTTP_STATUS.REDIRECT)
                 .build();
         } catch (error) {
-            console.log(error)
+            console.log('Logout Error:',error)
             return this.handleError();
         }
     }
@@ -243,7 +253,7 @@ export class AuthService {
             });
 
             if (!session) {
-                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND);
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, this.redirectLinks.HOME);
             }
             const { data } = session;
 
@@ -270,7 +280,8 @@ export class AuthService {
                 .setStatus(HTTP_STATUS.OK)
                 .build();
         } catch (error) {
-            return this.handleError(error,);
+            console.log('Email Verification Error:', error);
+            return this.handleError();
         }
     }
 
@@ -293,7 +304,7 @@ export class AuthService {
             });
 
             if (!session) {
-                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, '/signup');
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, this.redirectLinks.HOME);
             }
 
             const { data } = session;
@@ -321,7 +332,7 @@ export class AuthService {
                 .setStatus(HTTP_STATUS.OK)
                 .build();
         } catch (error) {
-            console.log(error)
+            console.log('Phone Verification Error', error)
             return this.handleError();
         }
     }

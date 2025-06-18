@@ -42,7 +42,7 @@ interface SessionData<T> {
     data: T;
     createdAt: Date;
     expiresAt: Date;
-    ip?: string;
+    user_agent?: string;
 };
 
 interface RateLimit {
@@ -52,11 +52,11 @@ interface RateLimit {
 
 export class SessionManager<T> {
     private sessionStore = new Map<string, SessionData<T>>();
-    private ipSessionCount = new Map<string, number>();
+    private user_agent_SessionCount = new Map<string, number>();
     private rateLimits = new Map<string, RateLimit>();
 
     private readonly SESSION_TTL_MS = 15 * 60 * 1000;
-    private readonly MAX_SESSIONS_PER_IP = 5;
+    private readonly MAX_SESSIONS_PER_user_agent = 5;
     private readonly RATE_LIMIT_WINDOW = 10 * 60 * 1000;
     private readonly MAX_REQUESTS_PER_WINDOW = 10;
 
@@ -66,14 +66,14 @@ export class SessionManager<T> {
         return this.sessionStore;
     }
 
-    async checkRateLimit(ip: string): Promise<boolean> {
+    async checkRateLimit(user_agent: string): Promise<boolean> {
         const now = Date.now();
-        const rate = this.rateLimits.get(ip);
+        const rate = this.rateLimits.get(user_agent);
 
         console.log(rate)
 
         if (!rate || now - rate.lastAttempt > this.RATE_LIMIT_WINDOW) {
-            this.rateLimits.set(ip, { count: 1, lastAttempt: now });
+            this.rateLimits.set(user_agent, { count: 1, lastAttempt: now });
             return false;
         }
 
@@ -84,19 +84,19 @@ export class SessionManager<T> {
         return rate.count > this.MAX_REQUESTS_PER_WINDOW;
     }
 
-    async checkSessionLimit(ip: string): Promise<boolean> {
-        const count = this.ipSessionCount.get(ip) || 0;
-        if (count >= this.MAX_SESSIONS_PER_IP) return false;
+    async checkSessionLimit(user_agent: string): Promise<boolean> {
+        const count = this.user_agent_SessionCount.get(user_agent) || 0;
+        if (count >= this.MAX_SESSIONS_PER_user_agent) return false;
 
-        this.ipSessionCount.set(ip, count + 1);
+        this.user_agent_SessionCount.set(user_agent, count + 1);
         return true;
     }
 
     async cleanupRateLimits(): Promise<void> {
         const now = Date.now();
-        for (const [ip, limit] of this.rateLimits.entries()) {
+        for (const [user_agent, limit] of this.rateLimits.entries()) {
             if (now - limit.lastAttempt > this.RATE_LIMIT_WINDOW) {
-                this.rateLimits.delete(ip);
+                this.rateLimits.delete(user_agent);
             }
         }
     }
@@ -107,32 +107,32 @@ export class SessionManager<T> {
             if (now > session.expiresAt.getTime()) {
                 this.sessionStore.delete(id);
                 console.log('delete session')
-                if (session.ip) {
-                    const count = this.ipSessionCount.get(session.ip) || 0;
-                    this.ipSessionCount.set(session.ip, Math.max(0, count - 1));
+                if (session.user_agent) {
+                    const count = this.user_agent_SessionCount.get(session.user_agent) || 0;
+                    this.user_agent_SessionCount.set(session.user_agent, Math.max(0, count - 1));
                 }
             }
         }
     }
 
-    createSession(id: string, data: T, ip: string, ttlMs = this.SESSION_TTL_MS): SessionData<T> {
+    createSession(id: string, data: T, user_agent: string, ttlMs = this.SESSION_TTL_MS): SessionData<T> {
         const now = new Date();
         const expiresAt = new Date(now.getTime() + ttlMs);
-        const session = { id, data, createdAt: now, expiresAt, ip };
+        const session = { id, data, createdAt: now, expiresAt, user_agent };
 
         this.sessionStore.set(id, session);
         return session;
     }
 
-    getSession(id: string, data: T | null, ip: string | null): SessionData<T> | null {
-        const session = this.sessionStore.get(id) || null;
+    getSession(id: string, data: T | null = null, user_agent: string | null = null): SessionData<T> | null {
+        let session = this.sessionStore.get(id) || null;
         if (!session) {
-            if (data && ip) {
-                return this.createSession(id, data, ip);
+            if (data && user_agent) {
+                session = this.createSession(id, data, user_agent);
             }
             return null;
         }
-        return this.sessionStore.get(id) || null;
+        return session;
     }
 
     updateSession(id: string, updatedData: Partial<T>): SessionData<T> | null {
