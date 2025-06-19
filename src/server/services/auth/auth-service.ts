@@ -18,11 +18,13 @@ import { ContentfulStatusCode } from "hono/utils/http-status";
 
 
 
-const userSession = getSessionManager('USER');
+export const authUserSession = getSessionManager('AUTH_USER');
 
 
 interface AuthHandlersProps {
+    screen: ScreenType;
     fieldAnswers: FieldAnswers[];
+    event: EventType;
     sessionId: string;
 }
 
@@ -61,8 +63,8 @@ export class AuthService {
         this.handlers = {
             [FlowType.INITIAL]: {
                 [ScreenType.PHONE_NUMBER_INITIAL]: {
-                    [EventType.TypeInputMobile]: this.handlePhoneVerification.bind(this),
-                    [EventType.TypeInputEmail]: this.handleEmailVerification.bind(this)
+                    [EventType.TypeInputMobile]: this.handleVerification.bind(this),
+                    [EventType.TypeInputEmail]: this.handleVerification.bind(this)
                 },
             },
             [FlowType.SIGN_UP]: {
@@ -74,22 +76,20 @@ export class AuthService {
                     [EventType.TypeSMSOTP]: this.handleVerifyPhoneOtp.bind(this),
                     [EventType.TypeInputExistingPhone]: this.handleVerifyPhoneOtp.bind(this)
                 },
+                [ScreenType.RESEND_OTP]: {
+                    [EventType.TypeEmailOTP]: this.handleResendOTP.bind(this),
+                    [EventType.TypeSMSOTP]: this.handleResendOTP.bind(this),
+                }
             },
             [FlowType.PROGRESSIVE_SIGN_UP]: {
                 [ScreenType.EMAIL_ADDRESS_PROGESSIVE]: {
-                    [EventType.TypeInputEmail]: this.handleEmailVerification.bind(this)
+                    [EventType.TypeInputEmail]: this.handleVerification.bind(this)
                 },
                 [ScreenType.PHONE_NUMBER_PROGRESSIVE]: {
-                    [EventType.TypeInputMobile]: this.handlePhoneVerification.bind(this)
+                    [EventType.TypeInputMobile]: this.handleVerification.bind(this)
                 },
                 [ScreenType.FIRST_NAME_LAST_NAME]: {
                     [EventType.TypeInputDetails]: this.handleInputDetails.bind(this)
-                },
-                [ScreenType.RESEND_OTP]: {
-                    [EventType.TypeEmailOTP]: this.handleVerifyEmailOtp.bind(this),
-                    [EventType.TypeInputExistingEmail]: this.handleVerifyEmailOtp.bind(this),
-                    [EventType.TypeSMSOTP]: this.handleVerifyPhoneOtp.bind(this),
-                    [EventType.TypeInputExistingPhone]: this.handleVerifyPhoneOtp.bind(this)
                 }
             },
             [FlowType.FINAL_SIGN_UP]: {
@@ -97,14 +97,14 @@ export class AuthService {
                     [EventType.TypeCheckBox]: this.handleCreateAccount.bind(this)
                 }
             },
-            [FlowType.LOGIN]: {
-                [ScreenType.EMAIL_OTP_CODE]: {
-                    [EventType.TypeEmailOTP]: this.handleVerifyEmailOtp.bind(this)
-                },
-                [ScreenType.PHONE_OTP]: {
-                    [EventType.TypeSMSOTP]: this.handleVerifyPhoneOtp.bind(this)
-                },
-            },
+            // [FlowType.LOGIN]: {
+            //     [ScreenType.EMAIL_OTP_CODE]: {
+            //         [EventType.TypeEmailOTP]: this.handleVerifyEmailOtp.bind(this)
+            //     },
+            //     [ScreenType.PHONE_OTP]: {
+            //         [EventType.TypeSMSOTP]: this.handleVerifyPhoneOtp.bind(this)
+            //     },
+            // },
         }
     }
 
@@ -123,18 +123,23 @@ export class AuthService {
             const user_agent = headersList.get('user-agent') || ''
 
 
-            if ((await userSession.checkRateLimit(user_agent))) {
+            console.log('check for rate limit');
+            if (await authUserSession.checkRateLimit(user_agent)) {
                 return this.handleError("Too many requests", HTTP_STATUS.TOO_MANY_REQUESTS);
             }
 
-            if (!props.sessionId && !(await userSession.checkSessionLimit(user_agent))) {
+            console.log('check for session limit');
+            if (!props.sessionId && !(await authUserSession.checkSessionLimit(user_agent))) {
                 return this.handleError('Maximum number of sessions reached.', HTTP_STATUS.TOO_MANY_REQUESTS);
             }
 
-            await userSession.cleanupExpiredSessions();
-            await userSession.cleanupRateLimits();
-
-            const state = userSession.getSession(props.sessionId, {
+            console.log('cleaned up session');
+            
+            await authUserSession.cleanupExpiredSessions();
+            await authUserSession.cleanupRateLimits();
+            
+            console.log('create or get session');
+            const session = authUserSession.getSession(props.sessionId, {
                 flowType: FlowType.INITIAL,
                 email: "",
                 phoneCountryCode: "",
@@ -150,9 +155,13 @@ export class AuthService {
                 eventType: undefined
             }, user_agent);
 
-            if (!state) {
+            console.log('session',session)
+
+            if (!session) {
                 return this.handleError(HTTP_ERRORS.INTERNAL_SERVER_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR, this.redirectLinks.HOME);
             }
+
+            console.log('handler')
 
             const handler = this.handlers[flow]?.[screen]?.[event];
 
@@ -165,7 +174,7 @@ export class AuthService {
                     .build();
             }
 
-            return await handler({ fieldAnswers, sessionId });
+            return await handler({ screen, event, fieldAnswers, sessionId });
         } catch (error) {
             console.error('Auth error:', error);
             return this.handleError();
@@ -195,11 +204,12 @@ export class AuthService {
             });
 
             cookieStore.set('sessionId', session.sessionId);
-            userSession.deleteSession(sessionId);
+            authUserSession.deleteSession(sessionId);
 
             return this.response
                 .setRedirectUrl(this.redirectLinks.RIDER_DASBOARD)
                 .setStatus(HTTP_STATUS.REDIRECT)
+                .setMessage(HTTP_SUCCESS.LOGIN)
                 .build();
         } catch (error) {
             console.log('Login Error:', error)
@@ -228,25 +238,51 @@ export class AuthService {
             return this.response
                 .setRedirectUrl(this.redirectLinks.LOGIN)
                 .setStatus(HTTP_STATUS.REDIRECT)
+                .setMessage(HTTP_SUCCESS.LOGOUT)
                 .build();
         } catch (error) {
-            console.log('Logout Error:',error)
+            console.log('Logout Error:', error)
             return this.handleError();
         }
     }
 
 
-    // Email Verification HandlerFunction
-    public async handleEmailVerification({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
+    // handle verification handler
+    private async handleVerification({ event, fieldAnswers, sessionId }: AuthHandlersProps
+    ): Promise<AuthResponse> {
         try {
-            const email = fieldAnswers[0].emailAddress as string;
-            const existingUser = await db.user.findUnique({ where: { email } });
-            const eventType = existingUser ? EventType.TypeInputExistingEmail : EventType.TypeEmailOTP;
-            const otp = await sendOTPEmail({ email });
+
+            const isEmail = event === EventType.TypeInputEmail ? true : event === EventType.TypeInputMobile ? false : undefined;
+
+            let contact: { email?: string; phonenumber?: string; phoneCountryCode?: string } = {};
+            let existingUser;
+            let eventType: EventType;
+            let otp;
+
+            if (isEmail) {
+                contact.email = fieldAnswers[0].emailAddress as string;
+                existingUser = await db.user.findUnique({ where: { email: contact.email } });
+                eventType = existingUser ? EventType.TypeInputExistingEmail : EventType.TypeEmailOTP;
+                otp = await sendOTPEmail({ email: contact.email });
+            } else {
+                contact.phoneCountryCode = fieldAnswers[0].phoneCountryCode as string;
+                contact.phonenumber = fieldAnswers[1].phoneNumber as string;
+                existingUser = await db.user.findUnique({
+                    where: {
+                        phonenumber: contact.phonenumber,
+                        phoneCountryCode: contact.phoneCountryCode
+                    }
+                });
+                eventType = existingUser ? EventType.TypeInputExistingPhone : EventType.TypeSMSOTP;
+                otp = await sendSMSMobile({
+                    phonenumber: contact.phonenumber,
+                    phoneCountryCode: contact.phoneCountryCode
+                });
+            }
 
             // Update state
-            const session = userSession.updateSession(sessionId, {
-                email,
+            const session = authUserSession.updateSession(sessionId, {
+                ...contact,
                 flowType: FlowType.SIGN_UP,
                 otp,
                 eventType
@@ -255,16 +291,22 @@ export class AuthService {
             if (!session) {
                 return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, this.redirectLinks.HOME);
             }
+
             const { data } = session;
+            const screenType = isEmail ? ScreenType.EMAIL_OTP_CODE : ScreenType.PHONE_OTP;
+            const fieldType = isEmail ?
+                findEnumKey(FieldType.EMAIL_OTP_CODE)! :
+                findEnumKey(FieldType.PHONE_SMS_OTP)!;
+            const hintValue = isEmail ? data.email! : data.phonenumber!;
 
             return this.response
                 .setForm({
                     flowType: data.flowType,
                     screens: {
-                        screenType: ScreenType.EMAIL_OTP_CODE,
+                        screenType,
                         fields: [{
-                            fieldType: findEnumKey(FieldType.EMAIL_OTP_CODE)!,
-                            hintValue: data.email,
+                            fieldType,
+                            hintValue,
                             otpWidth: otp.value.length,
                             profileHint: existingUser ? {
                                 firstname: existingUser?.firstname || '',
@@ -280,59 +322,47 @@ export class AuthService {
                 .setStatus(HTTP_STATUS.OK)
                 .build();
         } catch (error) {
-            console.log('Email Verification Error:', error);
+            console.error(`Verification Error:`, error);
             return this.handleError();
         }
     }
 
-    // Phone Verification
-    public async handlePhoneVerification({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
+    // Add new resend OTP method
+    public async handleResendOTP({ event, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
         try {
-            const phoneCountryCode = fieldAnswers[0].phoneCountryCode as string;
-            const phonenumber = fieldAnswers[1].phoneNumber as string;
-            const existingUser = await db.user.findUnique({ where: { phonenumber, phoneCountryCode } });
-            const eventType = existingUser ? EventType.TypeInputExistingPhone : EventType.TypeSMSOTP;
-            const otp = await sendSMSMobile({ phonenumber, phoneCountryCode });
-
-            // Update state
-            const session = userSession.updateSession(sessionId, {
-                phonenumber,
-                phoneCountryCode,
-                flowType: FlowType.SIGN_UP,
-                otp,
-                eventType
-            });
-
+            const session = authUserSession.getSession(sessionId);
+            const isEmail = event === EventType.TypeEmailOTP ? true : event === EventType.TypeSMSOTP ? false : undefined;
             if (!session) {
                 return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, this.redirectLinks.HOME);
             }
 
             const { data } = session;
+            let otp;
+
+            if (isEmail) {
+                if (!data.email) {
+                    return this.handleError('Email not found in session', HTTP_STATUS.BAD_REQUEST);
+                }
+                otp = await sendOTPEmail({ email: data.email });
+
+            } else {
+                if (!data.phonenumber || !data.phoneCountryCode) {
+                    return this.handleError('Phone number not found in session', HTTP_STATUS.BAD_REQUEST);
+                }
+                otp = await sendSMSMobile({
+                    phonenumber: data.phonenumber,
+                    phoneCountryCode: data.phoneCountryCode
+                });
+            }
+            // Update session with new OTP
+            authUserSession.updateSession(sessionId, { otp });
 
             return this.response
-                .setForm({
-                    flowType: data.flowType,
-                    screens: {
-                        screenType: ScreenType.PHONE_OTP,
-                        fields: [{
-                            fieldType: findEnumKey(FieldType.PHONE_SMS_OTP)!,
-                            hintValue: data.phonenumber,
-                            otpWidth: otp.value.length,
-                            profileHint: existingUser ? {
-                                firstname: existingUser?.firstname || '',
-                                lastname: existingUser?.lastname || '',
-                                phonenumber: existingUser?.phonenumber || '',
-                                email: existingUser?.email || '',
-                            } : null
-                        }],
-                        eventType
-                    },
-                    inAuthSessionId: sessionId,
-                })
                 .setStatus(HTTP_STATUS.OK)
+                .setMessage(`OTP has been sent to your ${isEmail ? 'Email address' : 'Phone Number'}`)
                 .build();
         } catch (error) {
-            console.log('Phone Verification Error', error)
+            console.error('Resend OTP Error:', error);
             return this.handleError();
         }
     }
@@ -340,10 +370,10 @@ export class AuthService {
     // OTP Verification
     public async handleVerifyEmailOtp({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
         try {
-            const session = userSession.getSession(sessionId, null, null);
+            const session = authUserSession.getSession(sessionId);
 
             if (!session) {
-                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, '/signup');
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, this.redirectLinks.HOME);
             }
 
             const { data: userState } = session;
@@ -359,7 +389,7 @@ export class AuthService {
                 if (user) return await this.login(user.id, sessionId,);
             }
 
-            const updatedSession = userSession.updateSession(sessionId, {
+            const updatedSession = authUserSession.updateSession(sessionId, {
                 isVerifiedEmail: true,
                 flowType: FlowType.PROGRESSIVE_SIGN_UP,
                 otp: { value: '', expiresAt: 0 }
@@ -367,17 +397,17 @@ export class AuthService {
 
             return this.handleConditionalResponse(sessionId, updatedSession?.data!);
         } catch (error) {
-            console.log('', error)
-            return this.handleError(error,);
+            console.log('Email otp verification error:', error)
+            return this.handleError();
         }
     }
 
     // Phone OTP Verification
     public async handleVerifyPhoneOtp({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
         try {
-            const session = userSession.getSession(sessionId, null, null);
+            const session = authUserSession.getSession(sessionId, null, null);
             if (!session) {
-                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, '/signup');
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, this.redirectLinks.HOME);
             }
             const { data: userState } = session;
 
@@ -399,7 +429,7 @@ export class AuthService {
                 if (user) return await this.login(user.id, sessionId,);
             }
 
-            const updatedSession = userSession.updateSession(sessionId, {
+            const updatedSession = authUserSession.updateSession(sessionId, {
                 isVerifiedPhonenumber: true,
                 flowType: FlowType.PROGRESSIVE_SIGN_UP,
                 otp: { value: '', expiresAt: 0 }
@@ -407,7 +437,7 @@ export class AuthService {
 
             return this.handleConditionalResponse(sessionId, updatedSession?.data!);
         } catch (error) {
-            console.log('', error)
+            console.log('Phone otp verification error:', error)
             return this.handleError();
         }
     }
@@ -420,7 +450,7 @@ export class AuthService {
                 lastname: fieldAnswers[1].lastName as string
             };
 
-            userSession.updateSession(sessionId, details);
+            authUserSession.updateSession(sessionId, details);
 
             return this.response
                 .setForm({
@@ -437,20 +467,20 @@ export class AuthService {
                 .setStatus(HTTP_STATUS.OK)
                 .build();
         } catch (error) {
-            console.log(, error)
+            console.log('Input Details Error:', error)
             return this.handleError();
         }
     }
 
     public async handleCreateAccount({ sessionId }: AuthHandlersProps): Promise<AuthResponse> {
         try {
-            const session = userSession.getSession(sessionId, null, null);
+            const session = authUserSession.getSession(sessionId, null, null);
             const headersList = await headers();
             const userAgent = headersList.get('user-agent') || 'unknown';
             const ip = headersList.get('x-forwarded-for') || '127.0.0.1';
 
             if (!session) {
-                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, '/signup');
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, this.redirectLinks.SIGN_UP);
             }
 
             const { data: {
@@ -491,11 +521,11 @@ export class AuthService {
             }
 
             return this.response
-                .setRedirectUrl(`/${user.role}`)
+                .setRedirectUrl(this.redirectLinks.RIDER_DASBOARD)
                 .setStatus(HTTP_STATUS.ok)
                 .build();
         } catch (error) {
-            console.log(error);
+            console.log('Create Account Error:', error);
             return this.handleError();
         }
     }
@@ -555,6 +585,7 @@ export class AuthService {
             .setStatus(HTTP_STATUS.OK)
             .build();;
     }
+
 
     // Error handler
     public handleError(error: unknown = HTTP_ERRORS.INTERNAL_SERVER_ERROR, statusCode: ContentfulStatusCode = HTTP_STATUS.INTERNAL_SERVER_ERROR, redirectUrl: string = ''): AuthResponse {

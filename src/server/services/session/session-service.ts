@@ -3,7 +3,7 @@ import { Role } from "@prisma/client";
 import { OTP } from "../security/otp";
 
 
-export interface UserSession {
+export interface AuthUserSession {
     flowType: FlowType;
     eventType?: EventType;
     firstname: string;
@@ -24,7 +24,7 @@ export interface BaseSession {
 }
 
 export const SessionKeys = {
-    USER: "USER",
+    AUTH_USER: "AUTH_USER",
     ADMIN: "ADMIN"
 } as const;
 ;
@@ -33,7 +33,7 @@ export type SessionKey = keyof typeof SessionKeys;
 
 
 export type SessionTypeMap = {
-    [SessionKeys.USER]: BaseSession & UserSession,
+    [SessionKeys.AUTH_USER]: BaseSession & AuthUserSession,
     [SessionKeys.ADMIN]: BaseSession & AdminSession
 };
 
@@ -70,10 +70,11 @@ export class SessionManager<T> {
         const now = Date.now();
         const rate = this.rateLimits.get(user_agent);
 
-        console.log(rate)
+        console.log('user agent', user_agent, rate)
 
         if (!rate || now - rate.lastAttempt > this.RATE_LIMIT_WINDOW) {
             this.rateLimits.set(user_agent, { count: 1, lastAttempt: now });
+            console.log(this.rateLimits.get(user_agent))
             return false;
         }
 
@@ -126,11 +127,9 @@ export class SessionManager<T> {
 
     getSession(id: string, data: T | null = null, user_agent: string | null = null): SessionData<T> | null {
         let session = this.sessionStore.get(id) || null;
-        if (!session) {
-            if (data && user_agent) {
-                session = this.createSession(id, data, user_agent);
-            }
-            return null;
+        if (!session && data && user_agent) {
+            console.log('creating a session')
+            return this.createSession(id, data, user_agent);
         }
         return session;
     }

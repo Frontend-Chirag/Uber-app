@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientIp } from "./lib/auth";
+import { AuthSessionMiddleware } from "./middleware/auth-session-middleware";
 
 
 const securityHeaders = {
@@ -14,7 +15,6 @@ const securityHeaders = {
 
 
 export async function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
   const response = NextResponse.next();
   
   // Add security headers
@@ -24,6 +24,8 @@ export async function middleware(request: NextRequest) {
 
   // client ip address
   await getClientIp();
+
+  await AuthSessionMiddleware(request)
 
 
 

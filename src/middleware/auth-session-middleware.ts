@@ -28,7 +28,7 @@ export async function AuthSessionMiddleware(request: NextRequest) {
         });
 
 
-        // check if session exists ans is not expired
+        // check if session exists and is not expired
         if (!session || new Date() > session.expiresAt) {
             // Delete expired session
             if (session) {
@@ -42,9 +42,9 @@ export async function AuthSessionMiddleware(request: NextRequest) {
 
 
         // check if device matches
-        const device = request.headers.get('user-agent') || 'unknow';
+        const device = request.headers.get('user-agent') || 'unknown';
 
-        if (session.device === device) {
+        if (session.device !== device) {
             await db.session.delete({
                 where: { id: session.id }
             });
@@ -62,7 +62,7 @@ export async function AuthSessionMiddleware(request: NextRequest) {
                 data: { expiresAt: newExpiresAt }
             });
 
-            await request.cookies.set('sessionId', sessionId)
+            request.cookies.set('sessionId', sessionId)
 
             return response;
 
@@ -74,7 +74,6 @@ export async function AuthSessionMiddleware(request: NextRequest) {
         console.error('Auth Session middleware error:', error);
         return redirectToLogin(request);
     }
-
 }
 
 function redirectToLogin(request: NextRequest) {

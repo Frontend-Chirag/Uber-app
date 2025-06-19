@@ -10,7 +10,7 @@ import { FieldValidationSchema } from '@/validators/validate-client';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FormProvider, useForm } from 'react-hook-form';
 import { formatTime, phoneCountryCodes } from '@/lib/constants';
-import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react';
+import { ArrowLeftIcon, ArrowRightIcon, LoaderCircle } from 'lucide-react';
 import { cn, findEnumKey } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -24,6 +24,7 @@ export interface OtpSectionProps {
     isFirstNameLastName: boolean;
     timeLeft: number;
     isCompleted: boolean;
+    isResendOtp: boolean;
     onResend: () => void;
 }
 
@@ -52,6 +53,7 @@ export interface AuthFormData {
 
 export const AuthForm = ({ children }: { children: React.ReactNode }) => {
 
+    const router = useRouter();
     const {
         flowType,
         fieldType,
@@ -75,7 +77,7 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
         (screenType === ScreenType.EMAIL_ADDRESS_PROGESSIVE ||
             screenType === ScreenType.PHONE_NUMBER_INITIAL);
 
-    const { mutateAsync } = useAuth()
+    const { mutateAsync, isPending } = useAuth()
 
 
     const [timeLeft, setTimeLeft] = useState(OTP_RESEND_TIMEOUT);
@@ -95,8 +97,19 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
 
 
     const handleResendOtp = useCallback(() => {
+
+        mutateAsync({
+            json: {
+                flowType: FlowType.SIGN_UP,
+                screenAnswers: {
+                    eventType: eventType,
+                    fieldAnswers: [],
+                    screenType: ScreenType.RESEND_OTP
+                },
+                inAuthSessionId
+            }
+        });
         setTimeLeft(15);
-        // toast.success('A new OTP has been sent!');
     }, []);
 
     const dynamicSchema = useMemo(() =>
@@ -123,19 +136,26 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
     });
 
     const handleSkip = useCallback(() => {
+        setIsLoadingNextScreen(true);
         // Skip the current step in progressive signup
         if (isProgressive) {
-            // Logic to skip the current step
-            console.log('Skipping current step');
+            setScreenType(ScreenType.FIRST_NAME_LAST_NAME)
+            setFieldType([
+                FieldType.FIRST_NAME,
+                FieldType.LAST_NAME
+            ])
+            setEventType(EventType.TypeInputDetails)
         }
+        setIsLoadingNextScreen(false);
     }, [isProgressive]);
 
     const handleBack = useCallback(() => {
         // Go back to the previous step
+        setIsLoadingNextScreen(true);
         if (!isProgressive) {
-            // Logic to go back
-            console.log('Going back');
+            router.refresh();
         }
+        setIsLoadingNextScreen(false);
     }, [isProgressive]);
 
 
@@ -188,6 +208,7 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
                     {children}
                     <OtpSection
                         isSignup={isSignup}
+                        isResendOtp={isPending}
                         isLogin={isLogin}
                         isFirstNameLastName={isFirstNameLastName}
                         timeLeft={timeLeft}
@@ -258,6 +279,7 @@ const OtpSection = memo(({
     isFirstNameLastName,
     timeLeft,
     isCompleted,
+    isResendOtp,
     onResend
 }: OtpSectionProps) => {
     if (!(isSignup || isLogin) || isFirstNameLastName) return null;
@@ -267,21 +289,27 @@ const OtpSection = memo(({
             <p className="text-sm text-neutral-400 font-Rubik-Normal mt-2">
                 Tip: Make sure to check your inbox and spam folders.
             </p>
-            <Button
-                disabled={timeLeft > 0 || isCompleted}
-                onClick={onResend}
-                variant="ghost"
-                className="w-fit px-4 py-2 text-md font-Rubik-SemiBold bg-neutral-100 rounded-full"
-            >
-                {timeLeft <= 0 ? (
-                    <p className="text-primary">Resend code via SMS</p>
-                ) : (
-                    <p className="text-gray-500">
-                        I haven't received a code {`(${formatTime(timeLeft)})`}
-                    </p>
-                )}
-            </Button>
-        </div>
+            {isResendOtp
+                ? <LoaderCircle className='animate-spin size-1' />
+                :
+                <Button
+                    disabled={timeLeft > 0 || isCompleted}
+                    onClick={onResend}
+                    variant="ghost"
+                    className="w-fit px-4 py-2 text-md font-Rubik-SemiBold bg-neutral-100 rounded-full"
+                >
+
+                    {timeLeft <= 0 ? (
+                        <p className="text-primary">Resend code via SMS</p>
+                    ) : (
+                        <p className="text-gray-500">
+                            I haven't received a code {`(${formatTime(timeLeft)})`}
+                        </p>
+                    )}
+                </Button>
+            }
+
+        </div >
     );
 });
 

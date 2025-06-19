@@ -5,7 +5,7 @@ import { OTP_SMS_TEMPLATE } from "./templates";
 import twilio from 'twilio';
 
 
-interface SMSParams {
+export interface SMSParams {
     phonenumber: string;
     phoneCountryCode: string;
 }

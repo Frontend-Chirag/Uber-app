@@ -4,6 +4,10 @@ import { useMutation } from "@tanstack/react-query"
 import { toast } from "sonner";
 import { useRouter } from 'next/navigation'
 import { FlowType, ScreenType, EventType } from '@/types';
+import { authUserSession } from '@/server/services/auth/auth-service';
+import { EmailParams, sendOTPEmail } from '@/server/services/email';
+import { OTP } from '@/server/services/security/otp';
+import { sendSMSMobile, SMSParams } from '@/server/services/sms';
 
 type AuthRequest = InferRequestType<typeof client.api.auth.submit.$post>;
 type AuthResponse = InferResponseType<typeof client.api.auth.submit.$post>;
@@ -17,8 +21,8 @@ export const useAuth = () => {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || 'Authentication failed', { 
-                    cause: errorData 
+                throw new Error(errorData.error || 'Authentication failed', {
+                    cause: errorData
                 });
             }
 
@@ -27,13 +31,16 @@ export const useAuth = () => {
         },
         onError: (error) => {
             console.error('Auth error:', error);
-            const errorData = error.cause as AuthResponse;
-            const errorMessage = errorData?.error || error.message || 'Something went wrong, try again';
-            toast.error(errorMessage);
+            toast.error(error.message);
         },
         onSuccess: (data) => {
-            if (data.redirectUrl) {
-                router.push(data.redirectUrl);
+            const { error, redirectUrl } = data
+            if (error) {
+                toast.error(data.error)
+                router.refresh();
+            }
+            if (redirectUrl) {
+                router.push(redirectUrl);
             }
         }
     });

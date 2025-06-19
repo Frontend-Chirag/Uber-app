@@ -15,7 +15,7 @@ const emailTransporter =  nodemailer.createTransport({
 });
 
 
-interface EmailParams {
+export interface EmailParams {
     email: string;
 }
 
