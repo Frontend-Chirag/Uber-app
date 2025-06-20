@@ -3,18 +3,16 @@ import type { NextRequest } from "next/server";
 import { db } from "@/lib/db/prisma";
 
 
+
+
 export async function AuthSessionMiddleware(request: NextRequest) {
 
     const sessionId = request.cookies.get('sessionId')?.value;
     const response = NextResponse.next();
 
-    // skip middleware for auth routes 
-    if (request.nextUrl.pathname.startsWith('/auth')) {
-        return response;
-    }
 
     if (!sessionId) {
-        return redirectToLogin(request)
+        return null
     }
 
 
@@ -37,7 +35,7 @@ export async function AuthSessionMiddleware(request: NextRequest) {
                 });
             }
 
-            return redirectToLogin(request);
+            return null;
         }
 
 
@@ -49,7 +47,8 @@ export async function AuthSessionMiddleware(request: NextRequest) {
                 where: { id: session.id }
             });
 
-            return redirectToLogin(request)
+
+            return  null
         }
 
         // Refresh session if it's close to expiring 
@@ -68,16 +67,11 @@ export async function AuthSessionMiddleware(request: NextRequest) {
 
         }
 
+
         return response;
 
     } catch (error) {
         console.error('Auth Session middleware error:', error);
-        return redirectToLogin(request);
+        return null
     }
-}
-
-function redirectToLogin(request: NextRequest) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login'
-    return NextResponse.redirect(url);
 }

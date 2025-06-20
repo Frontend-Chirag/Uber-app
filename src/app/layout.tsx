@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { QueryProvider } from "@/components/shared/query-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/shared/theme-provider";
 
 export const metadata: Metadata = {
   title: {
-    default: 'User app',
-    template: "User app | %s",
+    default: 'Ride with uber & Request a ride 24/7',
+    template: "%s",
     absolute: ''
   },
   description: 'A modern ride-sharing application',
@@ -22,10 +23,17 @@ export default function RootLayout({
       <body
         className={` antialiased`}
       >
-        <QueryProvider>
-          {children}
-          <Toaster />
-        </QueryProvider>
+        {/* <ThemeProvider
+          attribute={'class'}
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        > */}
+          <QueryProvider>
+            {children}
+            <Toaster />
+          </QueryProvider>
+        {/* </ThemeProvider> */}
       </body>
     </html>
   );

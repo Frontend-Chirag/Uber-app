@@ -97,6 +97,19 @@ const app = new Hono()
             };
             return ctx.json(errorResponse, errorResponse.status);
         }
+    })
+    .post('/logout', async (ctx) => {
+        try {
+            const response = await authService.logout();
+            return ctx.json(response, response.status);
+        } catch (error) {
+            const errorResponse: AuthResponse = {
+                success: false,
+                status: error instanceof z.ZodError ? HTTP_STATUS.BAD_REQUEST : HTTP_STATUS.INTERNAL_SERVER_ERROR,
+                error: 'Something went wrong. Please try again later.'
+            };
+            return ctx.json(errorResponse, errorResponse.status);
+        }
     });
 
 export default app;

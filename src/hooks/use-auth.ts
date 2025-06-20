@@ -11,6 +11,8 @@ import { sendSMSMobile, SMSParams } from '@/server/services/sms';
 
 type AuthRequest = InferRequestType<typeof client.api.auth.submit.$post>;
 type AuthResponse = InferResponseType<typeof client.api.auth.submit.$post>;
+type LogoutRequest = InferRequestType<typeof client.api.auth.logout.$post>;
+type LogoutResponse = InferResponseType<typeof client.api.auth.logout.$post>;
 
 export const useAuth = () => {
     const router = useRouter();
@@ -34,16 +36,49 @@ export const useAuth = () => {
             toast.error(error.message);
         },
         onSuccess: (data) => {
-            const { error, redirectUrl } = data
+            const { error, redirectUrl, message } = data
+            toast.success(message);
             if (error) {
                 toast.error(data.error)
                 router.refresh();
             }
             if (redirectUrl) {
-                router.push(redirectUrl);
+                router.replace(redirectUrl);
             }
         }
     });
 
     return mutation;
+}
+
+
+
+export const useLogout = () => {
+    const router = useRouter();
+
+    const mutation = useMutation<LogoutResponse, Error, LogoutRequest>({
+        mutationFn: async () => {
+            const response = await client.api.auth.logout.$post();
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Logout failed', {
+                    cause: errorData
+                });
+            }
+
+            const data = await response.json();
+            return data;
+        },
+        onError: (error) => {
+            console.error('Logout error:', error);
+            toast.error(error.message);
+        },
+        onSuccess: (data) => {
+            router.replace(data.redirectUrl!)
+            toast.success(data.message)
+        }
+    });
+
+    return mutation;
+
 }

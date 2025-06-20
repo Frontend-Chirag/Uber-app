@@ -17,7 +17,7 @@ type TitleConfig = {
 
 type ScreenConfig = {
     title: string | ((hintValue: { emailorPhone: string, firstname?: string }) => string);
-    subtitle?: string | ((hintValue: { emailorPhone: string, firstname?: string }) => string);
+    subtitle?: string | ((hintValue: { emailorPhone: string, firstname?: string }) => string | undefined);
     className?: string;
     wrapper?: boolean;
 };
@@ -40,14 +40,14 @@ const SCREEN_CONFIGS: ScreenConfigs = {
         title: (hintValue) => hintValue.firstname
             ? `Welcome back, ${hintValue.firstname}`
             : `Enter the 4-digit code sent to: ${hintValue.emailorPhone}`,
-        subtitle: (hintValue) => `Enter the 4-digit code sent to your email: ${hintValue.emailorPhone}`,
+        subtitle: (hintValue) => hintValue.firstname && `Enter the 4-digit code sent to your email: ${hintValue.emailorPhone}`,
         className: DEFAULT_TITLE_CLASS
     },
     [ScreenType.PHONE_OTP]: {
         title: (hintValue) => hintValue.firstname
             ? `Welcome back, ${hintValue.firstname}`
             : `Enter the 4-digit code sent via SMS to: ${hintValue.emailorPhone}`,
-        subtitle: (hintValue) => `Enter the 4-digit code sent to your your phone number: ${hintValue.emailorPhone}`,
+        subtitle: (hintValue) => hintValue.firstname && `Enter the 4-digit code sent to your your phone number: ${hintValue.emailorPhone}`,
         className: DEFAULT_TITLE_CLASS
     },
     [ScreenType.EMAIL_ADDRESS_PROGESSIVE]: {

@@ -208,7 +208,7 @@ export class AuthService {
 
             return this.response
                 .setRedirectUrl(this.redirectLinks.RIDER_DASBOARD)
-                .setStatus(HTTP_STATUS.REDIRECT)
+                .setStatus(HTTP_STATUS.OK)
                 .setMessage(HTTP_SUCCESS.LOGIN)
                 .build();
         } catch (error) {
@@ -237,8 +237,9 @@ export class AuthService {
 
             return this.response
                 .setRedirectUrl(this.redirectLinks.LOGIN)
-                .setStatus(HTTP_STATUS.REDIRECT)
+                .setStatus(HTTP_STATUS.OK)
                 .setMessage(HTTP_SUCCESS.LOGOUT)
+                .setSuccess(true)
                 .build();
         } catch (error) {
             console.log('Logout Error:', error)
@@ -476,6 +477,7 @@ export class AuthService {
         try {
             const session = authUserSession.getSession(sessionId, null, null);
             const headersList = await headers();
+            const cookieStore = await cookies();
             const userAgent = headersList.get('user-agent') || 'unknown';
             const ip = headersList.get('x-forwarded-for') || '127.0.0.1';
 

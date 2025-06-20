@@ -75,7 +75,7 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
     const isFirstNameLastName = screenType === ScreenType.FIRST_NAME_LAST_NAME;
     const isProgressive = flowType === FlowType.PROGRESSIVE_SIGN_UP &&
         (screenType === ScreenType.EMAIL_ADDRESS_PROGESSIVE ||
-            screenType === ScreenType.PHONE_NUMBER_INITIAL);
+            screenType === ScreenType.PHONE_NUMBER_PROGRESSIVE);
 
     const { mutateAsync, isPending } = useAuth()
 
@@ -255,7 +255,7 @@ const FormButton = memo(({ isInitial, isValid, isSubmitting, isProgressive, onSk
                 size='icon'
                 type='button'
                 variant='ghost'
-                className='rounded-full hover:bg-white'
+                className='rounded-full hover:bg-neutral-100 disabled:bg-neutral-100 disabled:text-black disabled:cursor-not-allowed'
             >
                 {isProgressive ? 'Skip' : <ArrowLeftIcon className='size-6' />}
             </Button>

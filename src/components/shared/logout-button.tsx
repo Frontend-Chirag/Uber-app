@@ -4,20 +4,16 @@ import React from 'react'
 import { Button } from '../ui/button'
 import { Loader2Icon, LogOutIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useLogout } from '@/hooks/use-auth'
 
 
 export const LogoutButton = () => {
 
-    // const { mutateAsync, isPending } = useLogout();
-    const router = useRouter();
+    const { mutateAsync, isPending } = useLogout();
 
 
     const logout = async () => {
-        // const response = await mutateAsync({});
-        // console.log(response);
-        // if (response.redirectUrl) {
-        //     router.replace('/');
-        // }
+        await mutateAsync({})
     }
 
 
@@ -26,7 +22,7 @@ export const LogoutButton = () => {
             title='Log out'
             onClick={logout}
         >
-            {/* {isPending ? (
+            {isPending ? (
                 <Loader2Icon className='size-6 animate-spin'/>
             ) : (
                 <>
@@ -35,7 +31,7 @@ export const LogoutButton = () => {
                 </>
             )
 
-            } */}
+            }
         </Button>
     )
 }
