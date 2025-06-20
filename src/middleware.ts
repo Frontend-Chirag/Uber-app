@@ -35,11 +35,20 @@ export async function middleware(request: NextRequest) {
   const isAuthenticated = authResponse && authResponse instanceof NextResponse && authResponse.status === 200;
  
 
-  const geo = geolocation(request);
-  const ip = ipAddress(request);  
-
-  console.log('Geolocation:', geo);
-  console.log('Ip Address', ip);
+  if (pathname === '/') {
+    const geo = process.env.NODE_ENV === 'development'
+      ? {
+          city: 'Mumbai',
+          country: 'IN',
+          region: 'MH',
+          latitude: '19.0760',
+          longitude: '72.8777',
+        }
+      : (request as any).geo || {};
+    const country = geo.country || 'US';
+    url.pathname = `/${country.toLowerCase()}/en/rider-home`;
+    return NextResponse.redirect(url);
+  }
 
   if (url.pathname === '/looking') {
     return NextResponse.redirect(new URL(`/go/home?visitor_id=sdbfiw92834ye9r&from=navbar`, request.url));
