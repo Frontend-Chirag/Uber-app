@@ -10,11 +10,12 @@ import {
 } from "./type";
 import { HTTP_ERRORS, HTTP_STATUS, HTTP_SUCCESS } from "@/lib/constants";
 import { getSessionManager } from "../../services/session/session-service";
-import { } from "hono";
+import { Context } from "hono";
 import { AuthSchema } from "@/validators/validate-server";
 import { z } from "zod";
 import { AuthResponseBuilder, AuthResponse } from "../response-builder";
 import { ContentfulStatusCode } from "hono/utils/http-status";
+import { geolocation } from "@/server/utils/geolocation";
 
 
 
@@ -51,13 +52,6 @@ export class AuthService {
     private static instance: AuthService;
     private handlers: FlowHandlers;
     private response: AuthResponseBuilder = new AuthResponseBuilder();
-    private redirectLinks = {
-        SIGN_UP: '/signup',
-        LOGIN: '/login',
-        HOME: '/',
-        RIDER_DASBOARD: '/dashboard/rider'
-    }
-
 
     private constructor() {
         this.handlers = {
@@ -115,6 +109,11 @@ export class AuthService {
         return AuthService.instance;
     }
 
+    private async redirectlink(type: 'ROOT' | 'LANDING'): Promise<string> {
+        const { country } = await geolocation.getGeolocation();
+        return type === 'ROOT' ? `/${country}/en` : `/${country}/en/rider-home`;
+    }
+
     // Main flow handler
     public async handleAuth(props: AuthHandler): Promise<AuthResponse> {
         try {
@@ -134,10 +133,10 @@ export class AuthService {
             }
 
             console.log('cleaned up session');
-            
+
             await authUserSession.cleanupExpiredSessions();
             await authUserSession.cleanupRateLimits();
-            
+
             console.log('create or get session');
             const session = authUserSession.getSession(props.sessionId, {
                 flowType: FlowType.INITIAL,
@@ -155,20 +154,21 @@ export class AuthService {
                 eventType: undefined
             }, user_agent);
 
-            console.log('session',session)
+            console.log('session', session)
 
             if (!session) {
-                return this.handleError(HTTP_ERRORS.INTERNAL_SERVER_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR, this.redirectLinks.HOME);
+                return this.handleError(HTTP_ERRORS.INTERNAL_SERVER_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR, await this.redirectlink('ROOT'));
             }
 
             console.log('handler')
+            
 
             const handler = this.handlers[flow]?.[screen]?.[event];
 
             if (!handler) {
                 return this.response
                     .setError('Something went wrong, try again')
-                    .setRedirectUrl(this.redirectLinks.HOME)
+                    .setRedirectUrl(await this.redirectlink('ROOT'))
                     .setSuccess(false)
                     .setStatus(HTTP_STATUS.BAD_REQUEST)
                     .build();
@@ -207,7 +207,7 @@ export class AuthService {
             authUserSession.deleteSession(sessionId);
 
             return this.response
-                .setRedirectUrl(this.redirectLinks.RIDER_DASBOARD)
+                .setRedirectUrl(await this.redirectlink('LANDING'))
                 .setStatus(HTTP_STATUS.OK)
                 .setMessage(HTTP_SUCCESS.LOGIN)
                 .build();
@@ -236,7 +236,7 @@ export class AuthService {
             }
 
             return this.response
-                .setRedirectUrl(this.redirectLinks.LOGIN)
+                .setRedirectUrl(await this.redirectlink('ROOT'))
                 .setStatus(HTTP_STATUS.OK)
                 .setMessage(HTTP_SUCCESS.LOGOUT)
                 .setSuccess(true)
@@ -252,7 +252,7 @@ export class AuthService {
     private async handleVerification({ event, fieldAnswers, sessionId }: AuthHandlersProps
     ): Promise<AuthResponse> {
         try {
-
+            const { country } = await geolocation.getGeolocation();
             const isEmail = event === EventType.TypeInputEmail ? true : event === EventType.TypeInputMobile ? false : undefined;
 
             let contact: { email?: string; phonenumber?: string; phoneCountryCode?: string } = {};
@@ -289,8 +289,10 @@ export class AuthService {
                 eventType
             });
 
+
+
             if (!session) {
-                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, this.redirectLinks.HOME);
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, await this.redirectlink('ROOT'));
             }
 
             const { data } = session;
@@ -334,7 +336,7 @@ export class AuthService {
             const session = authUserSession.getSession(sessionId);
             const isEmail = event === EventType.TypeEmailOTP ? true : event === EventType.TypeSMSOTP ? false : undefined;
             if (!session) {
-                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, this.redirectLinks.HOME);
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, await this.redirectlink('ROOT'));
             }
 
             const { data } = session;
@@ -374,7 +376,7 @@ export class AuthService {
             const session = authUserSession.getSession(sessionId);
 
             if (!session) {
-                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, this.redirectLinks.HOME);
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, await this.redirectlink('ROOT'));
             }
 
             const { data: userState } = session;
@@ -408,7 +410,7 @@ export class AuthService {
         try {
             const session = authUserSession.getSession(sessionId, null, null);
             if (!session) {
-                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, this.redirectLinks.HOME);
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, await this.redirectlink('ROOT'));
             }
             const { data: userState } = session;
 
@@ -482,7 +484,7 @@ export class AuthService {
             const ip = headersList.get('x-forwarded-for') || '127.0.0.1';
 
             if (!session) {
-                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, this.redirectLinks.SIGN_UP);
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, await this.redirectlink('ROOT'));
             }
 
             const { data: {
@@ -523,7 +525,7 @@ export class AuthService {
             }
 
             return this.response
-                .setRedirectUrl(this.redirectLinks.RIDER_DASBOARD)
+                .setRedirectUrl(await this.redirectlink('LANDING'))
                 .setStatus(HTTP_STATUS.ok)
                 .build();
         } catch (error) {

@@ -1,7 +1,7 @@
 import { UserProfile } from '@/components/shared/user-profile';
 import React from 'react'
 
-const Home = () => {
+export default function RideHome() {
 
   return (
     <div>
@@ -10,5 +10,3 @@ const Home = () => {
     </div>
   )
 };
-
-export default Home;

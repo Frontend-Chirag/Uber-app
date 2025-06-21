@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getClientIp } from "./lib/auth";
 import { AuthSessionMiddleware } from "./middleware/auth-session-middleware";
-import { geolocation, ipAddress } from '@vercel/functions';
+import { geolocation } from "./server/utils/geolocation";
 
 
 const securityHeaders = {
@@ -11,17 +10,20 @@ const securityHeaders = {
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
   'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:;"
-}
+};
+
 
 function withSecurityHeaders(response: NextResponse) {
   Object.entries(securityHeaders).forEach(([key, value]) => {
     response.headers.set(key, value);
   });
   return response;
-}
+};
 
 
-export const publicRoute = ['/login', '/signup', '/'];
+
+export const publicRoute = ['/login', '/signup'];
+
 
 
 export async function middleware(request: NextRequest) {
@@ -33,53 +35,45 @@ export async function middleware(request: NextRequest) {
 
   const authResponse = await AuthSessionMiddleware(request);
   const isAuthenticated = authResponse && authResponse instanceof NextResponse && authResponse.status === 200;
- 
 
-  if (pathname === '/') {
-    const geo = process.env.NODE_ENV === 'development'
-      ? {
-          city: 'Mumbai',
-          country: 'IN',
-          region: 'MH',
-          latitude: '19.0760',
-          longitude: '72.8777',
-        }
-      : (request as any).geo || {};
-    const country = geo.country || 'US';
-    url.pathname = `/${country.toLowerCase()}/en/rider-home`;
-    return NextResponse.redirect(url);
-  }
+  const { country } = await geolocation.getGeolocation();
+
+  const localizedLanding = `/${country.toLowerCase()}/en`;
+  publicRoute.push(localizedLanding)
+
 
   if (url.pathname === '/looking') {
     return NextResponse.redirect(new URL(`/go/home?visitor_id=sdbfiw92834ye9r&from=navbar`, request.url));
   }
 
 
+  // 3. Authenticated user should NOT access public routes
   if (isAuthenticated && isPublicRoute) {
-    return withSecurityHeaders(NextResponse.redirect(new URL('/go/home', request.url)));
-  }
-
-  if (!isAuthenticated && !isPublicRoute) {
-    url.pathname = "/login";
+    console.log('authenticated')
+    url.pathname = `${localizedLanding}/rider-home`;
     return withSecurityHeaders(NextResponse.redirect(url));
   }
 
+  // 4. Unauthenticated user trying to access protected routes (not public)
+  if (!isAuthenticated && !isPublicRoute) {
+    console.log('unAuthenticated')
+    url.pathname = localizedLanding;
+    return withSecurityHeaders(NextResponse.redirect(url));
+  }
 
   if (authResponse) {
     return withSecurityHeaders(authResponse);
   }
 
   const response = NextResponse.next();
-  await getClientIp();
-  return withSecurityHeaders(response);
 
-}
+  return withSecurityHeaders(response);
+};
 
 
 export const config = {
   matcher: [
     // Apply middleware to all routes except static files, _next, api, _vercel
     '/((?!_next|api|_vercel|.*\\.(?:html?|css|js(?!on)|jpe?g|png|svg|ico|woff2?)).*)'
-
   ]
-}
+};

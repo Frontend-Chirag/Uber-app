@@ -4,16 +4,14 @@ import Link from 'next/link'
 import React from 'react'
 
 
-const Dashboard = () => {
+export default function RiderHome() {
   return (
     <div className='w-screen h-screen'>
-      <Navbar
+      {/* <Navbar
         theme='LIGHT'
 
-      />
+      /> */}
       <Link href={'/looking'}>rider</Link>
     </div>
   )
 }
-
-export default Dashboard
