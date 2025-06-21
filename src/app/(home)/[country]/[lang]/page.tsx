@@ -1,9 +1,8 @@
 
 import { Homescreen } from "@/components/shared/home-screen";
-import { Navbar } from "@/components/shared/navbar/nav-bar";
-import { NavLinks } from "@/components/shared/navbar/nav-links";
-import { Publiclinks } from "@/lib/constants";
+import ridesharing from '@/app/assets/images/ridesharing-new.jpg';
 import Link from "next/link";
+import { Navbar } from "@/components/shared/nav-bar";
 
 
 interface langpage {
@@ -21,30 +20,14 @@ export default async function LangPage({ params }: langpage) {
   console.log(country, lang)
 
   return (
-    <main className="w-full h-full bg-neutral-100">
+    <main className="w-full h-full bg-neutral-100 px-8 flex flex-col">
       <Navbar
-        className='bg-primary text-white'
-      >
+        theme="LIGHT"
+      />
 
-
-        <div className='flex justify-start items-center gap-x-4 '>
-          <Link href={'/login'} className='text-md px-6 font-Rubik-Medium rounded-full no-underline'>
-            Login
-          </Link>
-          <Link href={'/signup'} className='text-md px-6 py-2 font-Rubik-Medium rounded-full bg-white hover:bg-white text-primary no-underline'>
-            Sign up
-          </Link>
-        </div>
-      </Navbar>
-
-      <Homescreen 
+      <Homescreen
         title="Go anywhere with uber"
-        image= {{
-          src: '',
-          alt: '',
-          height: 0,
-          width: 0
-        }}
+        src={ridesharing}
       />
 
     </main>
