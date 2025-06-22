@@ -49,7 +49,7 @@ export const Navbar = ({ theme, icon }: NavbarProps) => {
 
 
     return (
-        <div className='w-full h-[64px] border-b fixed top-0 left-0 px-16 flex items-center justify-between bg-white text-black dark:bg-black dark:text-white '>
+        <div className='w-full h-[64px] border-b fixed top-0 left-0 px-16 z-10 flex items-center justify-between bg-white text-black dark:bg-black dark:text-white '>
             <div className='flex items-start justify-center '>
                 {icon && icon.image
                     ? <Image
