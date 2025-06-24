@@ -6,7 +6,7 @@ interface HomeLayout {
 
 export default function HomeLayout({ children }: HomeLayout) {
     return (
-        <div>
+        <div className='w-full h-auto bg-white  flex flex-col relative'>
             {children}
         </div>
     )

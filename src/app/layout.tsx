@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { QueryProvider } from "@/components/shared/query-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { ThemeProvider } from "@/components/shared/theme-provider";
+import { Footer } from "@/components/shared/Footer";
+import { Header } from "@/components/shared/nav-bar";
 
 export const metadata: Metadata = {
   title: {
@@ -23,17 +24,18 @@ export default function RootLayout({
       <body
         className={` antialiased`}
       >
-        {/* <ThemeProvider
-          attribute={'class'}
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        > */}
-          <QueryProvider>
-            {children}
-            <Toaster />
-          </QueryProvider>
-        {/* </ThemeProvider> */}
+        <div className="w-full flex flex-col gap-y-8 relative min-h-screen">
+          <Header />
+          <main role="main" className="flex-grow">
+            <div className="max-w-screen-2xl mx-auto px-4 relative">
+              <QueryProvider>
+                {children}
+                <Toaster />
+              </QueryProvider>
+            </div>
+          </main>
+          <Footer />
+        </div>
       </body>
     </html>
   );

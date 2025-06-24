@@ -11,7 +11,7 @@ type BaseResponse = {
     message?: string;
 }
 
-class baseResponseBuilder<T extends BaseResponse = BaseResponse> {
+export class BaseResponseBuilder<T extends BaseResponse = BaseResponse> {
     protected response: Partial<T> = {
         success: true,
         status: HTTP_STATUS.OK
@@ -71,7 +71,7 @@ export type AuthResponse = BaseResponse & {
     redirectUrl?: string;
 }
 
-export class AuthResponseBuilder extends baseResponseBuilder<AuthResponse> {
+export class AuthResponseBuilder extends BaseResponseBuilder<AuthResponse> {
     constructor() {
         super();
         this.response.success = true;
@@ -93,4 +93,34 @@ export class AuthResponseBuilder extends baseResponseBuilder<AuthResponse> {
         }
         return super.build();
     }
+}
+
+export type SuggestionResponse = BaseResponse & {
+    suggestions: {
+        imageUrl: string,
+        primaryText: string,
+        secondaryText: string,
+        type: string,
+        url: string
+    }[];
+}
+
+export class SuggestionResponseBuilder extends BaseResponseBuilder<SuggestionResponse> {
+    constructor() {
+        super()
+        this.response.success = true;
+    }
+
+    setSuggestions(suggestions: SuggestionResponse['suggestions']): this {
+        this.response.suggestions = suggestions;
+        return this;
+    }
+
+    public build(): SuggestionResponse {
+        if (!this.response.suggestions) {
+            throw new Error('Response must have suggestions');
+        }
+        return super.build();
+    }
+
 }

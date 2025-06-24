@@ -1,5 +1,6 @@
 
 import Image, { StaticImageData } from "next/image";
+import Link from "next/link";
 
 import ridesharingimg from '@/app/assets/images/ridesharing-new.jpg';
 import courierimg from '@/app/assets/images/Courier.png';
@@ -11,12 +12,16 @@ import intercityimg from '@/app/assets/images/intercity.png';
 import airportimg from '@/app/assets/images/Airport-Fall.jpg';
 import watchimg from '@/app/assets/images/image-9.png';
 
-import { Navbar } from "@/components/shared/nav-bar";
-import { DateTimePicker, RideLocation } from "@/components/shared/ride.-location";
-import Link from "next/link";
+
+import { PickupDateTimeSelector } from "@/components/shared/pickup-date-time-selector";
+import { RideSearchPanel } from "@/components/shared/ride-search-panel";
 import { Button } from "@/components/ui/button";
-import { FaCalendar } from "react-icons/fa";
-import { Clock3Icon } from "lucide-react";
+import { Header } from "@/components/shared/nav-bar";
+import { BenefitList } from "@/components/shared/Benefits-list";
+import { Footer } from "@/components/shared/Footer";
+import { Suggestions } from "@/components/shared/suggestions";
+import { FloatingButton } from "@/components/shared/floating-button";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 
 
@@ -82,101 +87,78 @@ export default async function LangPage({ params }: langpage) {
   const { country, lang } = await params;
 
   return (
-    <main className="w-full h-full bg-white px-8 flex flex-col">
-      <Navbar
-        theme="LIGHT"
-      />
-
-      <section className='flex  justify-between items-center p-16 mt-[64px] '>
-        <div className='max-w-lg  flex flex-col justify-start items-start'>
-          <h1 className='font-Rubik-Semibold text-[52px] leading-[64px]'>Go anywhere with Uber</h1>
-          <div className='max-w-md flex mt-4 '>
-            <RideLocation />
+    <main className=" bg-white  flex flex-col relative py-8">
+      {/* Hero Section (Intro + Ride Search) */}
+      <section id="searchpanel" className='flex items-center lg:p-16 border  p-6 '>
+        <div className=' w-full flex flex-col justify-start items-start border'>
+          <h1 className='font-Rubik-Semibold lg:text-[52px] lg:leading-[64px] md:text-[44px] text-[36px]'>Go anywhere with Uber</h1>
+          <div className='max-w-md flex mt-5 '>
+            <RideSearchPanel />
           </div>
         </div>
-        <div className='w-[576] h-[384] hidden lg:flex  '>
+        <AspectRatio ratio={16 / 5} className=" mx-auto max-w-xl border xl:flex hidden">
           <Image
             src={ridesharingimg}
             alt={'image'}
-            objectFit='cover'
-            className='rounded-md'
+            fill
+            className=' h-full w-full rounded-2xl object-cover'
           />
-        </div>
+        </AspectRatio>
       </section>
 
-      <section className="flex flex-col px-16">
-        <h1 className='font-Rubik-Semibold text-[32px] '>Suggestions</h1>
-        <ul className="grid grid-cols-3 gap-4 mt-8">
-          {suggestions.map((suggestion, idx) => (
-            <li key={idx} className="flex p-4  bg-neutral-100 rounded-lg relative">
-              <Link href={suggestion.link ?? '#'} className="flex justify-between">
-                <div className="flex flex-col items-start justify-center gap-y-2">
-                  <h2 className="font-Rubik-Medium text-md">{suggestion.suggestionName}</h2>
-                  <p className="font-Rubik-light text-[12px] w-full max-w-[200px] break-words">
-                    {suggestion.details}
-                  </p>
-                  <Button
-                    size={'sm'}
-                    className=" bg-white text-sm mt-4 font-Rubik-Medium shadow-none hover:bg-neutral-300 rounded-full text-neutral-900"
-                  >
-                    Details
-                  </Button>
-                </div>
-                <Image
-                  src={suggestion.image}
-                  alt={`${suggestion.suggestionName} image`}
-                  width={128}
-                  height={128}
-                  className="absolute right-2 top-1/2  -translate-y-1/2  object-contain"
-                />
+      {/* Suggestions (Card list) */}
+      <section className="flex flex-col xl:px-16 px-6 ">
+        <h2 className='font-Rubik-Semibold text-[32px] '>Suggestions</h2>
+        <Suggestions />
+      </section>
+
+      {/* Log in CTA */}
+      <section className='flex xl:flex-row flex-col xl:justify-between xl:items-center xl:p-16  p-6   '>
+        <div className='xl:max-w-md w-full flex flex-col justify-start items-start'>
+          <h2 className='font-Rubik-Semibold text-[32px] '>Log in to see your recent activity</h2>
+          <div className='flex flex-col lg:mt-4 gap-y-4  '>
+            <h3 className="font-Rubik-Regular text-md">View past trips, tailored suggestions, support resources, and more.</h3>
+            <div className="flex flex-wrap justify-start items-end gap-y-4 gap-x-4">
+              <Link
+                href={''}
+                className="w-fit px-8 py-2 text-lg font-Rubik-Regular mt-6 text-white bg-black hover:bg-neutral-900 rounded-md"
+              >
+                Log in to your account
               </Link>
-            </li>
-          ))}
-
-        </ul>
-      </section>
-
-      <section className='flex  justify-between items-center p-16  '>
-        <div className='max-w-md  flex flex-col justify-start items-start'>
-          <h1 className='font-Rubik-Semibold text-[32px] '>Log in to see your recent activity</h1>
-          <div className='flex flex-col mt-4 gap-y-4 '>
-            <h2 className="font-Rubik-Regular text-md">View past trips, tailored suggestions, support resources, and more.</h2>
-            <Link
-              href={''}
-              className="w-fit px-8 py-2 text-lg font-Rubik-Regular mt-6 text-white bg-black hover:bg-neutral-900 rounded-md"
-            >
-              Log in to your account
-            </Link>
-            <Link
-              href="/looking"
-              className="w-fit relative inline-block pb-1 after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[1px] after:w-full after:bg-neutral-300
-                                   before:content-[''] before:absolute before:left-0 before:bottom-0 before:h-[1px] before:w-0 before:bg-black
+              <Link
+                href="/looking"
+                className="w-fit relative inline-block pb-1 after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[1px] after:w-full after:bg-neutral-300
+              before:content-[''] before:absolute before:left-0 before:bottom-0 before:h-[1px] before:w-0 before:bg-black
                                    before:transition-all before:duration-300 hover:before:w-full before:z-10"
-            >
-              Don’t have an Uber account? Sign up
-            </Link>
+              >
+                Don’t have an Uber account? Sign up
+              </Link>
+            </div>
           </div>
         </div>
-        <div className='w-[576] h-[384] hidden lg:flex  '>
+        <div className="relative w-full aspect-[3/2] xl:w-[576px] xl:aspect-[3/2] mt-8 xl:mt-0">
           <Image
             src={airportimg}
-            alt={'image'}
-            objectFit='cover'
-            className='rounded-md'
+            alt="Airport"
+            fill
+            className="object-cover rounded-md"
+            priority
           />
         </div>
+
       </section>
 
-      <section className=' flex items-center p-16  '>
+      {/* Plan Ahead (Date Picker + Benefits) */}
+      <section className=' flex items-center lg:p-16 p-6 '>
         <div className='w-full  flex flex-col justify-start items-start'>
-          <h1 className='font-Rubik-Semibold text-[32px] '>Plan for later</h1>
-          <div className="w-full   flex gap-x-6 mt-6">
-            <div className='flex flex-grow relative h-auto justify-start items-start gap-y-4 rounded-lg bg-[#9dcdd6] px-8 py-4 overflow-hidden'>
+          <h2 className='font-Rubik-Semibold text-[32px] '>Plan for later</h2>
+          <div className="w-full flex xl:flex-row flex-col gap-x-6 mt-6">
+            <article className='flex flex-grow relative h-auto justify-start items-start gap-y-4 rounded-lg bg-[#9dcdd6] px-8 py-4 overflow-hidden'>
               <div className="max-w-sm flex flex-col mt-8 ">
-                <h1 className='font-Rubik-Semibold text-[32px] leading-10'>Get your ride right with Uber Reserve</h1>
-                <h2 className="font-Rubik-Regular text-xl mt-8">Choose date and time</h2>
+                <h3 className='font-Rubik-Semibold text-[32px] leading-10'>Get your ride right with Uber Reserve</h3>
+                <h4 className="font-Rubik-Regular text-xl mt-8">Choose date and time</h4>
                 <div className='flex flex-col mt-2'>
-                  <DateTimePicker />
+                  <PickupDateTimeSelector />
                   <Button style={{ padding: '24px  20px' }} className="flex  text-lg mt-4 font-Rubik-Regular ">
                     Next
                   </Button>
@@ -184,35 +166,61 @@ export default async function LangPage({ params }: langpage) {
               </div>
               <Image
                 src={watchimg}
-                 width={250}
-                 height={250}
-                 objectFit="contain"
+                width={250}
+                height={250}
                 alt="image"
-                className="absolute -right-6 -bottom-2"
+                className="absolute -right-6 -bottom-2 object-contain"
               />
-            </div>
-            <div className='max-w-sm p-4 flex flex-col border  rounded-lg'>
-              <h2 className="font-Rubik-Medium text-xl">Benefits</h2>
-              <ul className="flex flex-col mt-4 gap-y-4">
-                <li className="flex items-center justify-start  px-6 py-2">
-                  <FaCalendar className="size-6 mr-6" />
-                  <p className="text-md font-Rubik-Regular">Choose your exact pickup time up to 90 days in advance.</p>
-                </li>
-                <li className="flex items-center justify-start  px-6 py-2">
-                  <Clock3Icon className="size-6 mr-6" />
-                  <p className="text-md font-Rubik-Regular">Extra wait time included to meet your ride.</p>
-                </li>
-                <li className="flex items-center justify-start  px-6 py-2">
-                  <FaCalendar className="size-6 mr-6" />
-                  <p className="text-mdfont-Rubik-Regular">Cancel at no charge up to 60 minutes in advance</p>
-                </li>
-              </ul>
+            </article>
+            <aside className='xl:max-w-sm w-full mt-4 xl:mt-0 p-4 flex flex-col border  rounded-lg'>
+              <h3 className="font-Rubik-Medium text-xl">Benefits</h3>
+              <BenefitList />
               <Link href='' className="text-lg font-Rubik-Light underline-dotted decoration-1 mt-6">see more</Link>
+            </aside>
+          </div>
+        </div>
+
+      </section>
+
+      {/* Driver CTA */}
+      <section className='flex xl:flex-row flex-col justify-between items-center lg:p-16  p-6 '>
+        <div className="relative w-full aspect-[3/2] xl:w-[576px] xl:aspect-[3/2] mt-8 xl:mt-0">
+          <Image
+            src={airportimg}
+            alt="Airport"
+            fill
+            className="object-cover rounded-md"
+            priority
+          />
+        </div>
+        <div className='xl:max-w-md w-full xl:mt-0 mt-4 flex flex-col  justify-start items-start'>
+          <h2 className='font-Rubik-Semibold text-[32px] '>Drive when you want, make what you need</h2>
+          <div className='flex flex-col mt-4 gap-y-4 '>
+            <h3 className="font-Rubik-Regular text-md">Make money on your schedule with deliveries or rides—or both. You can use your own car or choose a rental through Uber.</h3>
+            <div className="flex justify-start items-end gap-x-4">
+              <Link
+                href={''}
+                className="w-fit px-8 py-2 text-lg font-Rubik-Regular mt-6 text-white bg-black hover:bg-neutral-900 rounded-md"
+              >
+                Get Started
+              </Link>
+              <Link
+                href="/looking"
+                className="w-fit relative inline-block pb-1 after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[1px] after:w-full after:bg-neutral-300
+                                   before:content-[''] before:absolute before:left-0 before:bottom-0 before:h-[1px] before:w-0 before:bg-black
+                                   before:transition-all before:duration-300 hover:before:w-full before:z-10"
+              >
+                Already have an account? Sign in
+              </Link>
             </div>
           </div>
         </div>
       </section>
-
+      <FloatingButton
+        sectionId="searchpanel"
+        type="Price"
+        name="See price"
+      />
     </main>
   );
 };

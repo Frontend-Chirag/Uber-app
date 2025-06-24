@@ -355,3 +355,5 @@ model RegistrationProgress {
     createdAt      DateTime @default(now())
     updatedAt      DateTime @updatedAt
 }
+
+
