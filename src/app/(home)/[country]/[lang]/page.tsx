@@ -89,25 +89,38 @@ export default async function LangPage({ params }: langpage) {
   return (
     <main className=" bg-white  flex flex-col relative py-8">
       {/* Hero Section (Intro + Ride Search) */}
-      <section id="searchpanel" className='flex items-center lg:p-16 border  p-6 '>
-        <div className=' w-full flex flex-col justify-start items-start border'>
-          <h1 className='font-Rubik-Semibold lg:text-[52px] lg:leading-[64px] md:text-[44px] text-[36px]'>Go anywhere with Uber</h1>
-          <div className='max-w-md flex mt-5 '>
+      <section
+        id="searchpanel"
+        className="grid xl:grid-cols-2 gap-8 p-6 lg:p-16 border"
+      >
+        {/* Left Column */}
+        <div className="flex flex-col justify-start items-start">
+          <h1 className="font-Rubik-Semibold lg:text-[52px] lg:leading-[64px] md:text-[44px] text-[36px]">
+            Go anywhere with Uber
+          </h1>
+          <div className="max-w-md flex mt-5">
             <RideSearchPanel />
           </div>
         </div>
-        <AspectRatio ratio={16 / 5} className=" mx-auto max-w-xl border xl:flex hidden">
-          <Image
-            src={ridesharingimg}
-            alt={'image'}
-            fill
-            className=' h-full w-full rounded-2xl object-cover'
-          />
-        </AspectRatio>
+
+        {/* Right Column (Image) */}
+
+        <div className="hidden xl:block w-full">
+          <AspectRatio ratio={16 / 5}>
+            <Image
+              src={ridesharingimg}
+              alt="Uber ridesharing"
+              fill
+              className="rounded-2xl object-cover"
+            />
+          </AspectRatio>
+        </div>
+
       </section>
 
+
       {/* Suggestions (Card list) */}
-      <section className="flex flex-col xl:px-16 px-6 ">
+      <section className="flex flex-col xl:px-16 px-8 ">
         <h2 className='font-Rubik-Semibold text-[32px] '>Suggestions</h2>
         <Suggestions />
       </section>
