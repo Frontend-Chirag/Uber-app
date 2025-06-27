@@ -16,9 +16,7 @@ import watchimg from '@/app/assets/images/image-9.png';
 import { PickupDateTimeSelector } from "@/components/shared/pickup-date-time-selector";
 import { RideSearchPanel } from "@/components/shared/ride-search-panel";
 import { Button } from "@/components/ui/button";
-import { Header } from "@/components/shared/nav-bar";
 import { BenefitList } from "@/components/shared/Benefits-list";
-import { Footer } from "@/components/shared/Footer";
 import { Suggestions } from "@/components/shared/suggestions";
 import { FloatingButton } from "@/components/shared/floating-button";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
@@ -91,7 +89,7 @@ export default async function LangPage({ params }: langpage) {
       {/* Hero Section (Intro + Ride Search) */}
       <section
         id="searchpanel"
-        className="grid xl:grid-cols-2 gap-8 p-6 lg:p-16 border"
+        className="grid xl:grid-cols-2 gap-8 p-6 lg:p-16 "
       >
         {/* Left Column */}
         <div className="flex flex-col justify-start items-start">
@@ -106,7 +104,7 @@ export default async function LangPage({ params }: langpage) {
         {/* Right Column (Image) */}
 
         <div className="hidden xl:block w-full">
-          <AspectRatio ratio={16 / 5}>
+          <AspectRatio ratio={16 / 12} >
             <Image
               src={ridesharingimg}
               alt="Uber ridesharing"
@@ -237,3 +235,87 @@ export default async function LangPage({ params }: langpage) {
     </main>
   );
 };
+
+// payload
+// lat: 28.6329
+// locale: "en"
+// long: 77.2196
+// q: "Duggal co"
+// type: "pickup" | "destination"
+
+// response
+// "data": {
+  //   "candidates": [
+  //       {
+  //           "addressLine1": "Duggal Colony, Khanpur",
+  //           "addressLine2": "New Delhi, Delhi, India",
+  //           "categories": [
+  //               "geography"
+  //           ],
+  //           "id": "ChIJKcj3c5jhDDkRhRMmJXKvLDQ",
+  //           "provider": "google_places"
+  //       },
+  //       {
+  //           "addressLine1": "Duggal colony",
+  //           "addressLine2": "Devli Road, Pocket A, Duggal Colony, Khanpur, New Delhi, Delhi, India",
+  //           "categories": [
+  //               "place"
+  //           ],
+  //           "id": "ChIJi18BEgDhDDkRBjPuCmQkzds",
+  //           "provider": "google_places"
+  //       },
+  //       {
+  //           "addressLine1": "Duggal Colony, Khanpur, New Delhi",
+  //           "addressLine2": "Shiv Park, Duggal Colony, Khanpur, New Delhi, Delhi, India",
+  //           "categories": [
+  //               "place"
+  //           ],
+  //           "id": "ChIJ6S0A7UnhDDkRUW4Hl1Ws054",
+  //           "provider": "google_places"
+  //       },
+  //       {
+  //           "addressLine1": "Duggal College",
+  //           "addressLine2": "Vishal Cinema Road, Block A, Rajouri Garden, New Delhi, Delhi, India",
+  //           "categories": [
+  //               "place"
+  //           ],
+  //           "id": "ChIJW509n20DDTkRa6Py-yjZYJ4",
+  //           "provider": "google_places"
+  //       },
+  //       {
+  //           "addressLine1": "Ashu Duggal",
+  //           "addressLine2": "Hanuman Road Area, Connaught Place, New Delhi, Delhi, India",
+  //           "categories": [
+  //               "place"
+  //           ],
+  //           "id": "ChIJH1Zdzkn9DDkRjZ8Zt8Z15_o",
+  //           "provider": "google_places"
+  //       }
+  //   ],
+  //   "type": "pickup"
+  // }
+  // }
+
+// payload
+// id: "ChIJ3T8F3fDhDDkRnxNgWBpc2Zc"
+// locale: "en"
+// provider: "google_places"
+// type: "destination"
+
+// response
+// "status": "success",
+// "data": {
+//     "addressLine1": "Saket",
+//     "addressLine2": "New Delhi, Delhi",
+//     "categories": [
+//         "geography"
+//     ],
+//     "fullAddress": "Saket, New Delhi, Delhi 110017, India",
+//     "id": "ChIJ3T8F3fDhDDkRnxNgWBpc2Zc",
+//     "lat": 28.5220971,
+//     "long": 77.2101534,
+//     "provider": "google_places",
+//     "title": "Saket",
+//     "type": "destination"
+// }
+

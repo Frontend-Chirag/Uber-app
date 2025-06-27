@@ -53,14 +53,39 @@ export function generateTimeSlots() {
   const slotCount = (9 * 60) / 15; // 9 hours = 36 slots
 
   for (let i = 0; i < slotCount; i++) {
-      const slotTime = new Date(now.getTime() + i * 15 * 60 * 1000);
-      const formatted = slotTime.toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-      });
-      slots.push(formatted);
+    const slotTime = new Date(now.getTime() + i * 15 * 60 * 1000);
+    const formatted = slotTime.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+    slots.push(formatted);
   }
 
   return slots;
+}
+
+
+export async function getCurrentLocation(): Promise<{ lat: number, long: number }> {
+
+  if (!navigator.geolocation) {
+     navigator.permissions.query.({
+      name
+     })
+    throw new Error("Geolocation is not supported by your browser");
+  }
+
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition((position) => {
+      const { latitude, longitude } = position.coords;
+      resolve({ lat: latitude, long: longitude })
+    }, (error) => {
+      console.log('error in getting locaiton', error)
+      reject(error);
+    }, {
+      enableHighAccuracy: true,
+      timeout: 5000,
+      maximumAge: 0
+    });
+  })
 }

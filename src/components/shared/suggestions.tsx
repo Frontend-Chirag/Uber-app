@@ -9,13 +9,13 @@ import { client } from '@/server/rpc/hono-client';
 
 export async function Suggestions() {
 
-  const response = await client.api.suggestions.getProductSuggestions.$get({});
-  const { data: { suggestions } } = await response.json();
+  // const response = await client.api.suggestions.getProductSuggestions.$get({});
+  // const { data: { suggestions } } = await response.json();
 
 
   return (
       <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3  gap-4 mt-8">
-        {suggestions.map((suggestion, idx) => {
+        {/* {suggestions.map((suggestion, idx) => {
           if (idx === 0) return null;
           return (
             <li key={idx} className="flex p-4  bg-neutral-100 rounded-lg relative">
@@ -42,7 +42,7 @@ export async function Suggestions() {
               </Link>
             </li>
           )
-        })}
+        })} */}
       </ul>
   )
 }

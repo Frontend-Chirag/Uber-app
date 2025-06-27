@@ -1,47 +1,28 @@
-"use client";
-
 import React from 'react'
 import Link from 'next/link';
-import { PiNavigationArrowFill } from 'react-icons/pi';
-import { FaCircle, FaRegSquare } from 'react-icons/fa';
 
-import { Input } from '../ui/input'
 import { Button } from '../ui/button';
 
 import { PickupDateTimeSelector } from './pickup-date-time-selector';
+import { LocationInput } from './location-input';
+
 
 
 
 export const RideSearchPanel = () => {
 
-
     return (
         <section className='w-full flex flex-col'>
             <div className=' flex flex-col gap-y-4 relative '>
                 <div className='w-full flex flex-col gap-y-4 relative'>
-                    <div className='flex items-center justify-start gap-x-2 px-4 py-[6px] bg-neutral-100 rounded-lg focus-within:ring-2 focus-within:ring-black focus-within:bg-white transition'>
-                        <FaCircle
-                            className='size-[10px]'
-                        />
-                        <Input
-                            placeholder='Pickup location'
-                            className='px-2 font-Rubik-Regular text-xl text-black placeholder:text-[16px]  bg-transparent  placeholder:text-neutral-600 outline-none border-none shadow-none focus-visible:ring-0'
-                        />
-                        <PiNavigationArrowFill
-                            className='size-8 rotate-90'
-                        />
-                    </div>
-
-                    <div className='flex items-center justify-start gap-x-2 px-4 py-[6px] bg-neutral-100 rounded-lg  focus-within:ring-2 focus-within:ring-black focus-within:bg-white  transition'>
-                        <FaRegSquare
-                            className='size-[8px] ring-1 ring-neutral-400 bg-black'
-                        />
-                        <Input
-                            placeholder='Dropoff location'
-                            className='px-2 font-Rubik-Regular text-xl text-black placeholder:text-[16px] bg-transparent  placeholder:text-neutral-600 outline-none border-none shadow-none focus-visible:ring-0'
-                        />
-                    </div>
-
+                    <LocationInput
+                        type={'pickup'}
+                        placeholder='Enter location'
+                    />
+                    <LocationInput
+                        type={'destination'}
+                        placeholder='Enter destination'
+                    />
                     <div className='absolute top-1/2 left-5 size-6 w-[1px] h-[48px] -translate-y-1/2 bg-black' />
                 </div>
 
