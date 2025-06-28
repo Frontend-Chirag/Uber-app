@@ -69,9 +69,7 @@ export function generateTimeSlots() {
 export async function getCurrentLocation(): Promise<{ lat: number, long: number }> {
 
   if (!navigator.geolocation) {
-     navigator.permissions.query.({
-      name
-     })
+     
     throw new Error("Geolocation is not supported by your browser");
   }
 

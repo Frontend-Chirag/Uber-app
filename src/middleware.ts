@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AuthSessionMiddleware } from "./middleware/auth-session-middleware";
 import { geolocation } from "./server/utils/geolocation";
+import { connectRedis } from "./lib/db/redis";
 
 
 const securityHeaders = {
@@ -22,7 +23,7 @@ function withSecurityHeaders(response: NextResponse) {
 
 
 
-export const publicRoute = ['/login', '/signup'];
+export const publicRoute = ['/login', '/signup', '/'];
 
 
 
@@ -31,6 +32,8 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const url = request.nextUrl.clone();
   const isPublicRoute = publicRoute.includes(pathname);
+
+  await connectRedis();
 
 
   const authResponse = await AuthSessionMiddleware(request);
@@ -48,7 +51,7 @@ export async function middleware(request: NextRequest) {
 
 
   // 3. Authenticated user should NOT access public routes
-  if (isAuthenticated && isPublicRoute) {
+  if ((isAuthenticated && isPublicRoute)) {
     console.log('authenticated')
     url.pathname = `${localizedLanding}/rider-home`;
     return withSecurityHeaders(NextResponse.redirect(url));
