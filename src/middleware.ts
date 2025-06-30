@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AuthSessionMiddleware } from "./middleware/auth-session-middleware";
 import { geolocation } from "./server/utils/geolocation";
-import { connectRedis } from "./lib/db/redis";
 
 
 const securityHeaders = {
@@ -32,8 +31,6 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const url = request.nextUrl.clone();
   const isPublicRoute = publicRoute.includes(pathname);
-
-  await connectRedis();
 
 
   const authResponse = await AuthSessionMiddleware(request);

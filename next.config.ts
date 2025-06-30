@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/:path',
+        source: '/(.*)',
         headers: [
           {
             key: 'X-Forwarded-For',
@@ -38,7 +38,7 @@ const nextConfig: NextConfig = {
           {
             key: 'X-Real-IP',
             value: 'trust',
-          },
+          },    
         ]
       }
     ]

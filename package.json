@@ -15,6 +15,7 @@
     "seed:template": "node --loader ts-node/esm ./src/seed/seed-registration-template.ts"
   },
   "dependencies": {
+    "@fingerprintjs/fingerprintjs": "^4.6.2",
     "@hono/zod-validator": "^0.4.3",
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "^6.8.2",

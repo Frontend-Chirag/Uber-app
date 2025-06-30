@@ -19,7 +19,8 @@ import { geolocation } from "@/server/utils/geolocation";
 
 
 
-export const authUserSession = getSessionManager('AUTH_USER');
+export const authUserSession = getSessionManager('AUTH_SESSION');
+export const userSession = getSessionManager('USER_SESSION');
 
 
 interface AuthHandlersProps {
@@ -119,49 +120,15 @@ export class AuthService {
         try {
             const { flow, screen, event, fieldAnswers, sessionId } = props;
             const headersList = await headers();
-            const user_agent = headersList.get('user-agent') || ''
+            const userFingerPrint = headersList.get('x-uber-fingeprint') || ''
 
+            const session = authUserSession.getSession(sessionId, userFingerPrint);
 
-            console.log('check for rate limit');
-            if (await authUserSession.checkRateLimit(user_agent)) {
-                return this.handleError("Too many requests", HTTP_STATUS.TOO_MANY_REQUESTS);
-            }
-
-            console.log('check for session limit');
-            if (!props.sessionId && !(await authUserSession.checkSessionLimit(user_agent))) {
-                return this.handleError('Maximum number of sessions reached.', HTTP_STATUS.TOO_MANY_REQUESTS);
-            }
-
-            console.log('cleaned up session');
-
-            await authUserSession.cleanupExpiredSessions();
-            await authUserSession.cleanupRateLimits();
-
-            console.log('create or get session');
-            const session = authUserSession.getSession(props.sessionId, {
-                flowType: FlowType.INITIAL,
-                email: "",
-                phoneCountryCode: "",
-                phonenumber: "",
-                firstname: "",
-                lastname: "",
-                isVerifiedEmail: false,
-                isVerifiedPhonenumber: false,
-                otp: {
-                    value: "",
-                    expiresAt: 0
-                },
-                eventType: undefined
-            }, user_agent);
-
-            console.log('session', session)
+            console.log(session)
 
             if (!session) {
-                return this.handleError(HTTP_ERRORS.INTERNAL_SERVER_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR, await this.redirectlink('ROOT'));
+                return this.handleError('Something went wrong, try again')
             }
-
-            console.log('handler')
-            
 
             const handler = this.handlers[flow]?.[screen]?.[event];
 
@@ -282,7 +249,7 @@ export class AuthService {
             }
 
             // Update state
-            const session = authUserSession.updateSession(sessionId, {
+            const session = await authUserSession.updateSession(sessionId, {
                 ...contact,
                 flowType: FlowType.SIGN_UP,
                 otp,
@@ -333,8 +300,9 @@ export class AuthService {
     // Add new resend OTP method
     public async handleResendOTP({ event, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
         try {
-            const session = authUserSession.getSession(sessionId);
+            const session = await authUserSession.getSession(sessionId);
             const isEmail = event === EventType.TypeEmailOTP ? true : event === EventType.TypeSMSOTP ? false : undefined;
+
             if (!session) {
                 return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, await this.redirectlink('ROOT'));
             }
@@ -373,7 +341,7 @@ export class AuthService {
     // OTP Verification
     public async handleVerifyEmailOtp({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
         try {
-            const session = authUserSession.getSession(sessionId);
+            const session = await authUserSession.getSession(sessionId);
 
             if (!session) {
                 return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, await this.redirectlink('ROOT'));
@@ -392,7 +360,7 @@ export class AuthService {
                 if (user) return await this.login(user.id, sessionId,);
             }
 
-            const updatedSession = authUserSession.updateSession(sessionId, {
+            const updatedSession = await authUserSession.updateSession(sessionId, {
                 isVerifiedEmail: true,
                 flowType: FlowType.PROGRESSIVE_SIGN_UP,
                 otp: { value: '', expiresAt: 0 }
@@ -408,7 +376,7 @@ export class AuthService {
     // Phone OTP Verification
     public async handleVerifyPhoneOtp({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
         try {
-            const session = authUserSession.getSession(sessionId, null, null);
+            const session = await authUserSession.getSession(sessionId);
             if (!session) {
                 return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, await this.redirectlink('ROOT'));
             }
@@ -432,7 +400,7 @@ export class AuthService {
                 if (user) return await this.login(user.id, sessionId,);
             }
 
-            const updatedSession = authUserSession.updateSession(sessionId, {
+            const updatedSession = await authUserSession.updateSession(sessionId, {
                 isVerifiedPhonenumber: true,
                 flowType: FlowType.PROGRESSIVE_SIGN_UP,
                 otp: { value: '', expiresAt: 0 }
@@ -477,13 +445,13 @@ export class AuthService {
 
     public async handleCreateAccount({ sessionId }: AuthHandlersProps): Promise<AuthResponse> {
         try {
-            const session = authUserSession.getSession(sessionId, null, null);
+            const authSession = await authUserSession.getSession(sessionId);
             const headersList = await headers();
             const cookieStore = await cookies();
             const userAgent = headersList.get('user-agent') || 'unknown';
             const ip = headersList.get('x-forwarded-for') || '127.0.0.1';
 
-            if (!session) {
+            if (!authSession) {
                 return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, await this.redirectlink('ROOT'));
             }
 
@@ -495,7 +463,7 @@ export class AuthService {
                 firstname,
                 isVerifiedEmail,
                 isVerifiedPhonenumber,
-            } } = session;
+            } } = authSession;
 
             const user = await db.user.create({
                 data: {
@@ -520,8 +488,19 @@ export class AuthService {
                 }
             });
 
-            if (user.Session) {
-                cookieStore.set('sessionId', user.Session.sessionId);
+            const session = await userSession.createSession({
+                data: {
+                    userId: user.id
+                },
+                userFingerPrint: authSession.userFingerPrint || '',
+                ttlMs: 30 * 24 * 60 * 60 * 1000
+
+            })
+       
+            console.log('user session', session)
+
+            if (session) {
+                cookieStore.set('x-uber-session', session.id);
             }
 
             return this.response
