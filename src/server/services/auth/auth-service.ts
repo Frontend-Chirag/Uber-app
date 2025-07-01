@@ -122,6 +122,12 @@ export class AuthService {
             const headersList = await headers();
             const userFingerPrint = headersList.get('x-uber-fingeprint') || ''
 
+            // Rate limiting check (early)
+            const isLimited = await getSessionManager('AUTH_SESSION').checkRateLimit(userFingerPrint);
+            if (isLimited) {
+                return this.handleError('Too many requests, please try again later', HTTP_STATUS.TOO_MANY_REQUESTS);
+            }
+
             const session = authUserSession.getSession(sessionId, userFingerPrint);
 
             console.log(session)
@@ -153,24 +159,26 @@ export class AuthService {
         try {
             const headersList = await headers();
             const cookieStore = await cookies();
-
-            // Get device info
             const userAgent = headersList.get('user-agent') || 'unknown';
             const forwardedFor = headersList.get('x-forwarded-for');
             const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown';
 
-            const session = await db.session.create({
-                data: {
-                    user: {
-                        connect: { id: userId }
-                    },
-                    ip,
-                    device: userAgent,
-                    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-                }
+            // Create a new Redis session for the user (30 days)
+            const session = await userSession.createSession({
+                data: { userId },
+                userFingerPrint: '', // Optionally, pass a real fingerprint if available
+                ttlMs: 30 * 24 * 60 * 60 * 1000 // 30 days
             });
 
-            cookieStore.set('sessionId', session.sessionId);
+            if (session) {
+                cookieStore.set('x-uber-session', session.id, {
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'lax', // or 'strict' if you prefer
+                    maxAge: 30 * 24 * 60 * 60 // 30 days in seconds
+                });
+            }
+            // Clean up the short-lived auth session
             authUserSession.deleteSession(sessionId);
 
             return this.response
@@ -188,20 +196,11 @@ export class AuthService {
     public async logout(): Promise<AuthResponse> {
         try {
             const cookieStore = await cookies();
-            const sessionId = cookieStore.get('sessionId');
-
+            const sessionId = cookieStore.get('x-uber-session');
             if (sessionId) {
-                // Delete session from database
-                await db.session.delete({
-                    where: {
-                        sessionId: sessionId.value!
-                    }
-                });
-
-                // Clear session cookie
-                cookieStore.delete('sessionId');
+                await userSession.deleteSession(sessionId.value!);
+                cookieStore.delete('x-uber-session');
             }
-
             return this.response
                 .setRedirectUrl(await this.redirectlink('ROOT'))
                 .setStatus(HTTP_STATUS.OK)
@@ -475,17 +474,7 @@ export class AuthService {
                     isVerifiedEmail,
                     isVerifiedPhonenumber,
                     role: Role.rider,
-                    Session: {
-                        create: {
-                            ip,
-                            device: userAgent,
-                            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-                        }
-                    }
                 },
-                include: {
-                    Session: true
-                }
             });
 
             const session = await userSession.createSession({

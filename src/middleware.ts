@@ -55,7 +55,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // 4. Unauthenticated user trying to access protected routes (not public)
-  if (!isAuthenticated && !isPublicRoute) {
+  if (!isAuthenticated && (!isPublicRoute || pathname === '/')) {
     console.log('unAuthenticated')
     url.pathname = localizedLanding;
     return withSecurityHeaders(NextResponse.redirect(url));

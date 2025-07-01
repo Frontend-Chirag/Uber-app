@@ -1,12 +1,8 @@
-
-
 import { FlowType, EventType } from "@/types";
 import { OTP } from "../security/otp";
 import { createClient, RedisClientType } from 'redis';
 import { v4 as uuid } from 'uuid';
 import { keys } from "lodash";
-
-
 
 export interface AuthUserSession {
     flowType: FlowType;
@@ -24,7 +20,6 @@ export interface AuthUserSession {
 export interface UserSession {
     userId: string
 }
-
 
 export const SessionKeys = {
     AUTH_SESSION: "AUTH_SESSION",
@@ -47,13 +42,38 @@ interface SessionData<T> {
     sessionType: SessionKey;
 }
 
-
 interface SessionStats {
     totalSessions: number;
     activeSessions: number;
     expiredSessions: number;
 }
 
+// Option interfaces for session operations
+export interface CreateSessionOptions<T extends SessionKey> {
+    id?: string;
+    data: SessionTypeMap[T];
+    sessionType: T;
+    userFingerPrint: string;
+    ttlMs?: number;
+}
+
+export interface GetSessionOptions {
+    id: string;
+    sessionType: SessionKey;
+    userFingerPrint?: string;
+    ttlMs?: number;
+}
+
+export interface UpdateSessionOptions<T extends SessionKey> {
+    id: string;
+    sessionType: T;
+    updatedData: Partial<SessionTypeMap[T]>;
+}
+
+export interface DeleteSessionOptions {
+    id: string;
+    sessionType: SessionKey;
+}
 
 export class RedisSessionService {
     private static instance: RedisSessionService;
@@ -75,7 +95,6 @@ export class RedisSessionService {
     private readonly USER_FINGER_PRINT_PREFIX = 'user_agent:';
     private readonly STATS_PREFIX = 'stats:';
 
-
     private constructor() {
         this.redisClient = createClient({
             url: process.env.REDIS_URL,
@@ -93,7 +112,6 @@ export class RedisSessionService {
         this.setupEventHandlers();
         this.startCleanupInterval();
     }
-
 
     public static getInstance(): RedisSessionService {
         if (!RedisSessionService.instance) {
@@ -119,7 +137,6 @@ export class RedisSessionService {
         });
     }
 
-
     private async ensureConnection(): Promise<void> {
         if (this.isConnected) return;
 
@@ -130,28 +147,19 @@ export class RedisSessionService {
         await this.connectionPromise;
     }
 
-
-
-    // create session
-    async createSession<T extends SessionKey>(
-        id: string = uuid(),
-        data: SessionTypeMap[T],
-        sessionType: T,
-        userFingerPrint: string,
-        ttlMs: number = this.SESSION_TTL_MS,
-    ): Promise<SessionData<SessionTypeMap[T]> | null> {
+    /**
+     * Create a new session in Redis.
+     */
+    async createSession<T extends SessionKey>(options: CreateSessionOptions<T>): Promise<SessionData<SessionTypeMap[T]> | null> {
+        const { id = uuid(), data, sessionType, userFingerPrint, ttlMs = this.SESSION_TTL_MS } = options;
         try {
             await this.ensureConnection();
-
-            // check session limit for user fingerPrint
             const canCreate = await this.checkSessionLimit(userFingerPrint);
             if (!canCreate) {
                 throw new Error('Session limit exceeded for user agent');
             }
-
             const now = new Date();
             const expiresAt = new Date(now.getTime() + ttlMs);
-
             const session: SessionData<SessionTypeMap[T]> = {
                 id,
                 data,
@@ -160,93 +168,74 @@ export class RedisSessionService {
                 userFingerPrint,
                 sessionType
             };
-
             const sessionKey = this.getSessionKey(sessionType, id);
-            const sessionData = JSON.stringify(session)
-            // Redis pipeline 
+            const sessionData = JSON.stringify(session);
             const pipeline = this.redisClient.multi();
-
             pipeline.setEx(sessionKey, Math.floor(ttlMs / 1000), sessionData);
-
             const userFingerPrintKey = this.getUserFingerPrintKey(userFingerPrint);
             pipeline.hIncrBy(userFingerPrintKey, sessionType, 1);
             pipeline.expire(userFingerPrintKey, Math.floor(this.SESSION_TTL_MS / 1000));
-
             const statsKey = this.getStatsKey(sessionType);
             pipeline.hIncrBy(statsKey, 'totalSession', 1);
             pipeline.hIncrBy(statsKey, 'activeSession', 1);
             pipeline.expire(statsKey, 3600);
-
             await pipeline.exec();
-
             return session;
         } catch (error) {
             console.error('Error creating session:', error);
             return null;
         }
-    };
+    }
 
-    async getSession<T extends SessionKey>(
-        sessionType: T,
-        id: string,
-        userFingerPrint?: string,
-        ttlMs?: number
-    ): Promise<SessionData<SessionTypeMap[T]> | null> {
+    /**
+     * Get a session from Redis.
+     */
+    async getSession<T extends SessionKey>(options: GetSessionOptions): Promise<SessionData<SessionTypeMap[T]> | null> {
+        const { id, sessionType, userFingerPrint, ttlMs } = options;
         try {
             await this.ensureConnection();
-
             const sessionKey = this.getSessionKey(sessionType, id);
             const sessionData = await this.redisClient.get(sessionKey);
-
             if (!sessionData) {
-                return await this.createSession(id, {} as SessionTypeMap[T], sessionType, userFingerPrint!, ttlMs!);
-            };
-
-            console.log('before parsing a data', sessionData);
-
-            const session: SessionData<SessionTypeMap[T]> = JSON.parse(sessionData);
-
-            console.log('with parsing a data', sessionData);
-
-            if (new Date() > session.expiresAt) {
-                await this.deleteSession(sessionType, id);
-                return null
+                return await this.createSession({
+                    id,
+                    data: {} as SessionTypeMap[T],
+                    sessionType: sessionType as T,
+                    userFingerPrint: userFingerPrint!,
+                    ttlMs
+                });
             }
-
+            const session: SessionData<SessionTypeMap[T]> = JSON.parse(sessionData);
+            if (new Date() > session.expiresAt) {
+                await this.deleteSession({ id, sessionType });
+                return null;
+            }
             if (userFingerPrint && session.userFingerPrint !== userFingerPrint) return null;
-
             return session;
         } catch (error) {
             console.error('Error getting session:', error);
             return null;
         }
-    };
+    }
 
-
-    async updateSession<T extends SessionKey>(
-        sessionType: T,
-        id: string,
-        updatedData: Partial<SessionTypeMap[T]>
-    ): Promise<SessionData<SessionTypeMap[T]> | null> {
+    /**
+     * Update a session in Redis.
+     */
+    async updateSession<T extends SessionKey>(options: UpdateSessionOptions<T>): Promise<SessionData<SessionTypeMap[T]> | null> {
+        const { id, sessionType, updatedData } = options;
         try {
             await this.ensureConnection();
-
-            const session = await this.getSession(sessionType, id);
+            const session = await this.getSession({ id, sessionType }) as SessionData<SessionTypeMap[T]>;
             if (!session) return null;
-
             session.data = { ...session.data, ...updatedData };
-
-
             const sessionKey = this.getSessionKey(sessionType, id);
             const ttl = await this.redisClient.ttl(sessionKey);
-
             const sessionStr = JSON.stringify(session);
             await this.redisClient.setEx(
                 sessionKey,
                 ttl > 0 ? ttl : Math.floor(this.SESSION_TTL_MS / 1000),
                 sessionStr
             );
-
             return session;
         } catch (error) {
             console.error('Error updating session:', error);
@@ -254,30 +243,25 @@ export class RedisSessionService {
         }
     }
 
-    async deleteSession<T extends SessionKey>(
-        sessionType: T,
-        id: string
-    ): Promise<boolean> {
+    /**
+     * Delete a session from Redis.
+     */
+    async deleteSession(options: DeleteSessionOptions): Promise<boolean> {
+        const { id, sessionType } = options;
         try {
             await this.ensureConnection();
-
             const sessionKey = this.getSessionKey(sessionType, id);
-            const session = await this.getSession(sessionType, id);
-
+            const session = await this.getSession({ id, sessionType });
             if (!session) return false;
-
             const pipeline = this.redisClient.multi();
             pipeline.del(sessionKey);
-
-            if (session.userFingerPrint) { // or userFingerPrint if you changed naming
+            if (session.userFingerPrint) {
                 const userFingerPrintKey = this.getUserFingerPrintKey(session.userFingerPrint);
                 pipeline.hIncrBy(userFingerPrintKey, sessionType, -1);
             }
-
             const statsKey = this.getStatsKey(sessionType);
             pipeline.hIncrBy(statsKey, 'activeSessions', -1);
             pipeline.hIncrBy(statsKey, 'expiredSessions', 1);
-
             await pipeline.exec();
             return true;
         } catch (error) {
@@ -370,7 +354,6 @@ export class RedisSessionService {
         }
     }
 
-
     async getSessionStats<T extends SessionKey>(
         sessionType: T
     ): Promise<SessionStats> {
@@ -443,7 +426,7 @@ export class RedisSessionService {
                             try {
                                 const session = JSON.parse(value);
                                 if (new Date() > new Date(session.expiresAt)) {
-                                    await this.deleteSession(session.sessionType, session.id);
+                                    await this.deleteSession({ id: session.id, sessionType });
                                 }
                             } catch {
                                 await this.redisClient.del(keys[index]);
@@ -465,14 +448,13 @@ export class RedisSessionService {
         }, this.CLEANUP_INTERVAL);
     }
 
-
     private getRateLimitKey(user_agent: string): string {
         return `${this.RATE_LIMIT_PREFIX}${user_agent}`;
     }
+
     // check session limit for user fingerPrint 
     async checkSessionLimit(userFingerPrint: string): Promise<boolean> {
         try {
-
             await this.ensureConnection();
 
             const userFingerPrintKey = this.getUserFingerPrintKey(userFingerPrint);
@@ -502,14 +484,12 @@ export class RedisSessionService {
         return `${this.STATS_PREFIX}${sessionType}`;
     }
 
-
-
     async isSessionExpired<T extends SessionKey>(
         sessionType: T,
         sessionId: string
     ): Promise<boolean> {
         try {
-            const session = await this.getSession(sessionType, sessionId);
+            const session = await this.getSession({ id: sessionId, sessionType });
             return !session || new Date() > session.expiresAt;
         } catch (error) {
             console.error('Error checking session expiration:', error);
@@ -540,43 +520,24 @@ export class RedisSessionService {
             console.error('Error disconnecting Redis client:', error);
         }
     }
-
 }
 
 export const redisSessionService = RedisSessionService.getInstance();
 
-export function getSessionManager<T extends SessionKey>(sessionType: T
-): {
-    createSession: (args: {
-        id?: string;
-        data: SessionTypeMap[T];
-        userFingerPrint: string;
-        ttlMs?: number;
-    }) => Promise<SessionData<SessionTypeMap[T]> | null>;
-    getSession: (id: string, userFingerPrint?: string, ttlMs?: number) => Promise<SessionData<SessionTypeMap[T]> | null>;
-    updateSession: (id: string, updatedData: Partial<SessionTypeMap[T]>) => Promise<SessionData<SessionTypeMap[T]> | null>;
-    deleteSession: (id: string) => Promise<boolean>;
-    getAllSessions: () => Promise<SessionData<SessionTypeMap[T]>[]>;
-    isSessionExpired: (sessionId: string) => Promise<boolean>;
-} {
+
+
+export function getSessionManager<T extends SessionKey>(sessionType: T) {
     return {
-        createSession: ({
-            id = uuid(),
-            data,
-            userFingerPrint,
-            ttlMs,
-        }: {
-            id?: string;
-            data: SessionTypeMap[T];
-            userFingerPrint: string;
-            ttlMs?: number;
-        }) =>
-            redisSessionService.createSession(id, data, sessionType, userFingerPrint, ttlMs),
-        getSession: (id: string, userFingerPrint?: string, ttlMs?: number) => redisSessionService.getSession(sessionType, id, userFingerPrint, ttlMs),
+        createSession: (options: Omit<CreateSessionOptions<T>, 'sessionType'>) =>
+            redisSessionService.createSession({ ...options, sessionType }),
+        getSession: (id: string, userFingerPrint?: string, ttlMs?: number) =>
+            redisSessionService.getSession<T>({ id, sessionType, userFingerPrint, ttlMs }),
         updateSession: (id: string, updatedData: Partial<SessionTypeMap[T]>) =>
-            redisSessionService.updateSession(sessionType, id, updatedData),
-        deleteSession: (id: string) => redisSessionService.deleteSession(sessionType, id),
+            redisSessionService.updateSession<T>({ id, sessionType, updatedData }),
+        deleteSession: (id: string) =>
+            redisSessionService.deleteSession({ id, sessionType }),
         getAllSessions: () => redisSessionService.getAllSessions(sessionType),
-        isSessionExpired: (sessionId: string) => redisSessionService.isSessionExpired(sessionType, sessionId)
+        isSessionExpired: (sessionId: string) => redisSessionService.isSessionExpired(sessionType, sessionId),
+        checkRateLimit: (userFingerPrint: string) => redisSessionService.checkRateLimit(userFingerPrint)
     };
 }
