@@ -3,6 +3,7 @@ import { InferRequestType, InferResponseType } from 'hono';
 import { useMutation } from "@tanstack/react-query"
 import { toast } from "sonner";
 import { useRouter } from 'next/navigation'
+import { getVisitorId } from '@/lib/utils';
 
 
 type AuthRequest = InferRequestType<typeof client.api.auth.submit.$post>;
@@ -15,7 +16,12 @@ export const useAuth = () => {
 
     const mutation = useMutation<AuthResponse, Error, AuthRequest>({
         mutationFn: async ({ json }) => {
-            const response = await client.api.auth.submit.$post({ json });
+            const visitorId = await getVisitorId();
+            const response = await client.api.auth.submit.$post({ json }, {
+                headers: {
+                    'x-visitor-id': visitorId
+                }
+            });
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -31,15 +37,14 @@ export const useAuth = () => {
             console.error('Auth error:', error);
             toast.error(error.message);
         },
-        onSuccess: (data) => {
-            const { error, redirectUrl, message } = data
+        onSuccess: ({ data, message, error }) => {
             toast.success(message);
             if (error) {
-                toast.error(data.error)
+                toast.error(error)
                 router.refresh();
             }
-            if (redirectUrl) {
-                router.replace(redirectUrl);
+            if (data.redirectUrl) {
+                router.replace(data.redirectUrl);
             }
         }
     });
@@ -69,9 +74,11 @@ export const useLogout = () => {
             console.error('Logout error:', error);
             toast.error(error.message);
         },
-        onSuccess: (data) => {
-            router.replace(data.redirectUrl!)
-            toast.success(data.message)
+        onSuccess: ({data, message}) => {
+            if(data.redirectUrl){
+                router.replace(data.redirectUrl)
+            }
+            toast.success(message)
         }
     });
 

@@ -1,7 +1,7 @@
 import { FieldType } from "@/types";
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-
+import FingerprintJS from '@fingerprintjs/fingerprintjs';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -69,7 +69,7 @@ export function generateTimeSlots() {
 export async function getCurrentLocation(): Promise<{ lat: number, long: number }> {
 
   if (!navigator.geolocation) {
-     
+
     throw new Error("Geolocation is not supported by your browser");
   }
 
@@ -86,4 +86,14 @@ export async function getCurrentLocation(): Promise<{ lat: number, long: number 
       maximumAge: 0
     });
   })
+}
+
+
+export async function getVisitorId(): Promise<string> {
+  const fpPromise = FingerprintJS.load()
+  // Get the visitor identifier when you need it.
+  const fp = await fpPromise
+  const result = await fp.get()
+
+  return result.visitorId;
 }

@@ -77,7 +77,7 @@ const app = new Hono()
     .post('/submit', zValidator('json', AuthSchema), async (ctx) => {
         try {
             const { flowType, inAuthSessionId, screenAnswers } = ctx.req.valid('json');
-            const sessionId = inAuthSessionId || uuid();
+            const sessionId = inAuthSessionId;
 
             const response = await authService.handleAuth({
                 flow: flowType,
@@ -91,6 +91,7 @@ const app = new Hono()
         } catch (error) {
             console.error('Auth error:', error);
             const errorResponse: AuthResponse = {
+                data: {},
                 success: false,
                 status: error instanceof z.ZodError ? HTTP_STATUS.BAD_REQUEST : HTTP_STATUS.INTERNAL_SERVER_ERROR,
                 error: getClientErrorMessage(error)
@@ -104,6 +105,7 @@ const app = new Hono()
             return ctx.json(response, response.status);
         } catch (error) {
             const errorResponse: AuthResponse = {
+                data: {},
                 success: false,
                 status: error instanceof z.ZodError ? HTTP_STATUS.BAD_REQUEST : HTTP_STATUS.INTERNAL_SERVER_ERROR,
                 error: 'Something went wrong. Please try again later.'

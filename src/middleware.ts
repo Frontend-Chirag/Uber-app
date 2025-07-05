@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
   const { country } = await geolocation.getGeolocation();
 
   const localizedLanding = `/${country.toLowerCase()}/en`;
-  publicRoute.push(localizedLanding)
+  // publicRoute.push(localizedLanding)
 
 
   if (url.pathname === '/looking') {
@@ -48,14 +48,14 @@ export async function middleware(request: NextRequest) {
 
 
   // 3. Authenticated user should NOT access public routes
-  if ((isAuthenticated && isPublicRoute)) {
+  if (isAuthenticated && isPublicRoute) {
     console.log('authenticated')
     url.pathname = `${localizedLanding}/rider-home`;
     return withSecurityHeaders(NextResponse.redirect(url));
   }
 
   // 4. Unauthenticated user trying to access protected routes (not public)
-  if (!isAuthenticated && (!isPublicRoute || pathname === '/')) {
+  if (!isAuthenticated && isPublicRoute) {
     console.log('unAuthenticated')
     url.pathname = localizedLanding;
     return withSecurityHeaders(NextResponse.redirect(url));

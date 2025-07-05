@@ -1,14 +1,20 @@
 
 import { getSessionManager } from '@/server/services/session/session-service'
+import { headers } from 'next/headers';
 import Link from 'next/link'
+import { redirect } from 'next/navigation';
 import React from 'react'
 
 
 export default async function RiderHome() {
 
   const userSession = getSessionManager('USER_SESSION');
+  const headerList = await headers()
+  const uberSession = headerList.get('x-uber-session');
 
-  const session = await userSession.getSession('0919487d-f5ae-4893-b12a-1e1702abe9f6')
+  if (uberSession === null) redirect('/login')
+
+  const session = await userSession.getSession(uberSession)
 
   console.log('session', session)
 

@@ -5,18 +5,13 @@ import { findEnumKey } from '@/lib/utils';
 import { sendOTPEmail } from "@/server/services/email";
 import { sendSMSMobile } from "@/server/services/sms";
 import { Role } from "@prisma/client";
-import {
-    ConditionalResponseData
-} from "./type";
 import { HTTP_ERRORS, HTTP_STATUS, HTTP_SUCCESS } from "@/lib/constants";
 import { getSessionManager } from "../../services/session/session-service";
-import { Context } from "hono";
 import { AuthSchema } from "@/validators/validate-server";
 import { z } from "zod";
 import { AuthResponseBuilder, AuthResponse } from "../response-builder";
 import { ContentfulStatusCode } from "hono/utils/http-status";
 import { geolocation } from "@/server/utils/geolocation";
-
 
 
 export const authUserSession = getSessionManager('AUTH_SESSION');
@@ -36,6 +31,23 @@ interface AuthHandler {
     event: EventType;
     fieldAnswers: FieldAnswers[];
     sessionId: string;
+}
+
+interface ConditionalResponseData {
+    flowType: FlowType;
+    email: string;
+    phoneCountryCode: string;
+    phonenumber: string;
+    firstname: string;
+    lastname: string;
+    isVerifiedEmail: boolean;
+    isVerifiedPhonenumber: boolean;
+    otp: {
+        value: string;
+        expiresAt: number;
+    };
+    eventType?: EventType;
+    ip?: string
 }
 
 type HandlerFunction = (
@@ -120,34 +132,61 @@ export class AuthService {
         try {
             const { flow, screen, event, fieldAnswers, sessionId } = props;
             const headersList = await headers();
-            const userFingerPrint = headersList.get('x-uber-fingeprint') || ''
+            const visitorId = headersList.get('x-visitor-id') || '';
+
+
+            console.log(visitorId)
 
             // Rate limiting check (early)
-            const isLimited = await getSessionManager('AUTH_SESSION').checkRateLimit(userFingerPrint);
+            const isLimited = await getSessionManager('AUTH_SESSION').checkRateLimit(visitorId);
+
             if (isLimited) {
-                return this.handleError('Too many requests, please try again later', HTTP_STATUS.TOO_MANY_REQUESTS);
+                return this.handleError('Too many requests, please try again later', HTTP_STATUS.TOO_MANY_REQUESTS, );
             }
 
-            const session = authUserSession.getSession(sessionId, userFingerPrint);
+            let session;
 
+
+            console.log('before a session');
+            if (!sessionId) {
+                console.log('after a session');
+                session = await authUserSession.createSession({
+                    data: {
+                        email: '',
+                        phonenumber: '',
+                        firstname: '',
+                        lastname: '',
+                        flowType: FlowType.INITIAL,
+                        isVerifiedEmail: false,
+                        isVerifiedPhonenumber: true,
+                        otp: {
+                            expiresAt: 0,
+                            value: '0'
+                        },
+                        phoneCountryCode: '',
+                        eventType: EventType.TypeEmailOTP
+                    },
+                    visitorId,
+                })
+            }
+            
             console.log(session)
 
-            if (!session) {
-                return this.handleError('Something went wrong, try again')
-            }
 
             const handler = this.handlers[flow]?.[screen]?.[event];
 
             if (!handler) {
                 return this.response
-                    .setError('Something went wrong, try again')
-                    .setRedirectUrl(await this.redirectlink('ROOT'))
+                    .setError('Something went wrong, try again', )
+                    .setData({ redirectUrl: await this.redirectlink('ROOT') })
                     .setSuccess(false)
                     .setStatus(HTTP_STATUS.BAD_REQUEST)
                     .build();
             }
 
-            return await handler({ screen, event, fieldAnswers, sessionId });
+            console.log('id', session?.id)
+
+            return await handler({ screen, event, fieldAnswers, sessionId: session ? session.id : sessionId  });
         } catch (error) {
             console.error('Auth error:', error);
             return this.handleError();
@@ -159,14 +198,14 @@ export class AuthService {
         try {
             const headersList = await headers();
             const cookieStore = await cookies();
-            const userAgent = headersList.get('user-agent') || 'unknown';
-            const forwardedFor = headersList.get('x-forwarded-for');
+            const forwardedFor = headersList.get('x-forwarded-for') || '';
+            const visitorId = headersList.get('x-visitor-id') || '';
             const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown';
 
             // Create a new Redis session for the user (30 days)
             const session = await userSession.createSession({
                 data: { userId },
-                userFingerPrint: '', // Optionally, pass a real fingerprint if available
+                visitorId, // Optionally, pass a real fingerprint if available
                 ttlMs: 30 * 24 * 60 * 60 * 1000 // 30 days
             });
 
@@ -182,7 +221,7 @@ export class AuthService {
             authUserSession.deleteSession(sessionId);
 
             return this.response
-                .setRedirectUrl(await this.redirectlink('LANDING'))
+                .setData({ redirectUrl: await this.redirectlink('LANDING') })
                 .setStatus(HTTP_STATUS.OK)
                 .setMessage(HTTP_SUCCESS.LOGIN)
                 .build();
@@ -202,7 +241,9 @@ export class AuthService {
                 cookieStore.delete('x-uber-session');
             }
             return this.response
-                .setRedirectUrl(await this.redirectlink('ROOT'))
+                .setData({
+                    redirectUrl: await this.redirectlink('ROOT')
+                })
                 .setStatus(HTTP_STATUS.OK)
                 .setMessage(HTTP_SUCCESS.LOGOUT)
                 .setSuccess(true)
@@ -247,6 +288,9 @@ export class AuthService {
                 });
             }
 
+            console.log(sessionId)
+
+
             // Update state
             const session = await authUserSession.updateSession(sessionId, {
                 ...contact,
@@ -254,7 +298,6 @@ export class AuthService {
                 otp,
                 eventType
             });
-
 
 
             if (!session) {
@@ -269,24 +312,26 @@ export class AuthService {
             const hintValue = isEmail ? data.email! : data.phonenumber!;
 
             return this.response
-                .setForm({
-                    flowType: data.flowType,
-                    screens: {
-                        screenType,
-                        fields: [{
-                            fieldType,
-                            hintValue,
-                            otpWidth: otp.value.length,
-                            profileHint: existingUser ? {
-                                firstname: existingUser?.firstname || '',
-                                lastname: existingUser?.lastname || '',
-                                phonenumber: existingUser?.phonenumber || '',
-                                email: existingUser?.email || '',
-                            } : null
-                        }],
-                        eventType
-                    },
-                    inAuthSessionId: sessionId,
+                .setData({
+                    form: {
+                        flowType: data.flowType,
+                        screens: {
+                            screenType,
+                            fields: [{
+                                fieldType,
+                                hintValue,
+                                otpWidth: otp.value.length,
+                                profileHint: existingUser ? {
+                                    firstname: existingUser?.firstname || '',
+                                    lastname: existingUser?.lastname || '',
+                                    phonenumber: existingUser?.phonenumber || '',
+                                    email: existingUser?.email || '',
+                                } : null
+                            }],
+                            eventType
+                        },
+                        inAuthSessionId: sessionId,
+                    }
                 })
                 .setStatus(HTTP_STATUS.OK)
                 .build();
@@ -341,6 +386,8 @@ export class AuthService {
     public async handleVerifyEmailOtp({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
         try {
             const session = await authUserSession.getSession(sessionId);
+
+            console.log(session)
 
             if (!session) {
                 return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, await this.redirectlink('ROOT'));
@@ -423,16 +470,19 @@ export class AuthService {
             authUserSession.updateSession(sessionId, details);
 
             return this.response
-                .setForm({
-                    flowType: FlowType.FINAL_SIGN_UP,
-                    screens: {
-                        screenType: ScreenType.AGREE_TERMS_AND_CONDITIONS,
-                        fields: [{
-                            fieldType: findEnumKey(FieldType.AGREE_TERMS_AND_CONDITIONS)!
-                        }],
-                        eventType: EventType.TypeCheckBox,
-                    },
-                    inAuthSessionId: sessionId
+                .setData({
+                    form: {
+
+                        flowType: FlowType.FINAL_SIGN_UP,
+                        screens: {
+                            screenType: ScreenType.AGREE_TERMS_AND_CONDITIONS,
+                            fields: [{
+                                fieldType: findEnumKey(FieldType.AGREE_TERMS_AND_CONDITIONS)!
+                            }],
+                            eventType: EventType.TypeCheckBox,
+                        },
+                        inAuthSessionId: sessionId
+                    }
                 })
                 .setStatus(HTTP_STATUS.OK)
                 .build();
@@ -447,7 +497,6 @@ export class AuthService {
             const authSession = await authUserSession.getSession(sessionId);
             const headersList = await headers();
             const cookieStore = await cookies();
-            const userAgent = headersList.get('user-agent') || 'unknown';
             const ip = headersList.get('x-forwarded-for') || '127.0.0.1';
 
             if (!authSession) {
@@ -481,11 +530,11 @@ export class AuthService {
                 data: {
                     userId: user.id
                 },
-                userFingerPrint: authSession.userFingerPrint || '',
+                visitorId: authSession.visitorId || '',
                 ttlMs: 30 * 24 * 60 * 60 * 1000
 
             })
-       
+
             console.log('user session', session)
 
             if (session) {
@@ -493,7 +542,7 @@ export class AuthService {
             }
 
             return this.response
-                .setRedirectUrl(await this.redirectlink('LANDING'))
+                .setData({ redirectUrl: await this.redirectlink('LANDING') })
                 .setStatus(HTTP_STATUS.ok)
                 .build();
         } catch (error) {
@@ -506,26 +555,30 @@ export class AuthService {
     private handleConditionalResponse(inAuthSessionId: string, data: ConditionalResponseData): AuthResponse {
         if (data.isVerifiedEmail && data.isVerifiedPhonenumber) {
             return this.response
-                .setForm({
-                    flowType: FlowType.PROGRESSIVE_SIGN_UP,
-                    screens: {
-                        screenType: ScreenType.FIRST_NAME_LAST_NAME,
-                        fields: [
-                            { fieldType: findEnumKey(FieldType.FIRST_NAME)! },
-                            { fieldType: findEnumKey(FieldType.LAST_NAME)! },
-                        ],
-                        eventType: EventType.TypeInputDetails,
-                    },
-                    inAuthSessionId
+                .setData({
+                    form: {
+                        flowType: FlowType.PROGRESSIVE_SIGN_UP,
+                        screens: {
+                            screenType: ScreenType.FIRST_NAME_LAST_NAME,
+                            fields: [
+                                { fieldType: findEnumKey(FieldType.FIRST_NAME)! },
+                                { fieldType: findEnumKey(FieldType.LAST_NAME)! },
+                            ],
+                            eventType: EventType.TypeInputDetails,
+                        },
+                        inAuthSessionId
+                    }
                 })
                 .setStatus(HTTP_STATUS.OK)
                 .build();
         }
         if (!data.isVerifiedEmail) {
             return this.response
-                .setForm({
-                    flowType: FlowType.PROGRESSIVE_SIGN_UP,
-                    screens: {
+                .setData({
+                    form: {
+
+                        flowType: FlowType.PROGRESSIVE_SIGN_UP,
+                        screens: {
                         screenType: ScreenType.EMAIL_ADDRESS_PROGESSIVE,
                         fields: [
                             {
@@ -537,14 +590,16 @@ export class AuthService {
                         eventType: EventType.TypeInputEmail,
                     },
                     inAuthSessionId
-                })
+                }})
                 .setStatus(HTTP_STATUS.OK)
                 .build();;
         }
         return this.response
-            .setForm({
-                flowType: FlowType.PROGRESSIVE_SIGN_UP,
-                screens: {
+            .setData({
+                form: {
+
+                    flowType: FlowType.PROGRESSIVE_SIGN_UP,
+                    screens: {
                     screenType: ScreenType.PHONE_NUMBER_PROGRESSIVE,
                     fields: [
                         { fieldType: findEnumKey(FieldType.PHONE_COUNTRY_CODE)!, hintValue: data.phoneCountryCode! },
@@ -553,22 +608,34 @@ export class AuthService {
                     eventType: EventType.TypeInputMobile,
                 },
                 inAuthSessionId
-            })
+            }})
             .setStatus(HTTP_STATUS.OK)
             .build();;
     }
 
-
-    // Error handler
-    public handleError(error: unknown = HTTP_ERRORS.INTERNAL_SERVER_ERROR, statusCode: ContentfulStatusCode = HTTP_STATUS.INTERNAL_SERVER_ERROR, redirectUrl: string = ''): AuthResponse {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+    public handleError(
+        clientMessage: string = HTTP_ERRORS.INTERNAL_SERVER_ERROR,
+        statusCode: ContentfulStatusCode = HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        logError?: unknown,
+        context: string = 'UnknownContext'
+      ): AuthResponse {
+        const logMessage =
+          logError instanceof Error
+            ? logError.stack || logError.message
+            : typeof logError === 'string'
+              ? logError
+              : JSON.stringify(logError);
+      
+        console.error(`[AUTH ERROR][${context}] ${clientMessage} →`, logMessage);
+      
         return this.response
-            .setStatus(statusCode)
-            .setError(errorMessage)
-            .setSuccess(false)
-            .setRedirectUrl(redirectUrl)
-            .build();
-    }
+          .setStatus(statusCode)
+          .setError(clientMessage)
+          .setSuccess(false)
+          .setData({})
+          .build();
+      }
+      
 };
 
 

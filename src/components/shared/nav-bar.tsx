@@ -7,7 +7,7 @@ import { ChevronDown, GlobeIcon } from 'lucide-react';
 import { Profile } from './profile';
 
 export const Header = () => {
-  const isAuthenticated = true;
+  const isAuthenticated = false;
 
   return (
     <header

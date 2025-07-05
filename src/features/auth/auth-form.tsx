@@ -180,8 +180,8 @@ export const AuthForm = ({ children }: { children: React.ReactNode }) => {
                 }
             });
 
-            if (!response.error && response.form) {
-                const { inAuthSessionId, flowType, screens: { eventType, fields, screenType } } = response.form;
+            if (response.data && response.data.form) {
+                const { inAuthSessionId, flowType, screens: { eventType, fields, screenType } } = response.data.form;
 
                 setInAuthSessionId(inAuthSessionId);
                 setFlowType(flowType);

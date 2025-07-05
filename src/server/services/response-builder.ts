@@ -4,14 +4,15 @@ import { ContentfulStatusCode } from "hono/utils/http-status";
 
 // ------------------------------------------------------------Base Response Builder----------------------------------------------------------
 
-type BaseResponse = {
+type BaseResponse<TData = any> = {
     status: ContentfulStatusCode;
     error?: string;
     success: boolean;
     message?: string;
+    data: TData;
 }
 
-export class BaseResponseBuilder<T extends BaseResponse = BaseResponse> {
+export class BaseResponseBuilder<TData = any, T extends BaseResponse<TData> = BaseResponse<TData>> {
     protected response: Partial<T> = {
         success: true,
         status: HTTP_STATUS.OK
@@ -38,6 +39,11 @@ export class BaseResponseBuilder<T extends BaseResponse = BaseResponse> {
         return this;
     }
 
+    public setData(data: TData): this {
+        this.response.data = data;
+        return this;
+    }
+
     public build(): T {
         return this.response as T;
     }
@@ -58,44 +64,42 @@ interface AuthFields {
     otpWidth?: number;
 };
 
-export type AuthResponse = BaseResponse & {
-    form?: {
-        flowType: FlowType;
-        screens: {
-            screenType: ScreenType;
-            fields: AuthFields[];
-            eventType: EventType;
-        }
-        inAuthSessionId: string;
-    }
-    redirectUrl?: string;
-}
 
-export class AuthResponseBuilder extends BaseResponseBuilder<AuthResponse> {
+type AuthForm = {
+    flowType: FlowType;
+    screens: {
+        screenType: ScreenType;
+        fields: AuthFields[];
+        eventType: EventType;
+    };
+    inAuthSessionId: string;
+};
+
+export type AuthResponseData = {
+    form?: AuthForm;
+    redirectUrl?: string;
+};
+
+export type AuthResponse = BaseResponse<AuthResponseData>;
+
+
+export class AuthResponseBuilder extends BaseResponseBuilder<AuthResponseData, AuthResponse> {
     constructor() {
         super();
         this.response.success = true;
     }
 
-    setForm(form: AuthResponse['form']): this {
-        this.response.form = form;
+    setData(data: AuthResponseData): this {
+        this.response.data = data;
         return this;
-    }
-
-    setRedirectUrl(redirectUrl: string): this {
-        this.response.redirectUrl = redirectUrl;
-        return this;
-    }
+      }
 
     build(): AuthResponse {
-        if (!this.response.form && !this.response.redirectUrl) {
-            throw new Error('Response must have either form or redirectUrl');
-        }
         return super.build();
     }
 }
 
-export type SuggestionResponse = BaseResponse & {
+export type SuggestionData = {
     suggestions: {
         imageUrl: string,
         primaryText: string,
@@ -105,19 +109,21 @@ export type SuggestionResponse = BaseResponse & {
     }[];
 }
 
-export class SuggestionResponseBuilder extends BaseResponseBuilder<SuggestionResponse> {
+export type SuggestionResponse = BaseResponse<SuggestionData>
+
+export class SuggestionResponseBuilder extends BaseResponseBuilder<SuggestionData, BaseResponse> {
     constructor() {
         super()
         this.response.success = true;
     }
 
-    setSuggestions(suggestions: SuggestionResponse['suggestions']): this {
-        this.response.suggestions = suggestions;
+    public setData(data: SuggestionData): this {
+        this.response.data = data;
         return this;
     }
-
+   
     public build(): SuggestionResponse {
-        if (!this.response.suggestions) {
+        if (!this.response.data) {
             throw new Error('Response must have suggestions');
         }
         return super.build();
