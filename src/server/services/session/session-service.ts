@@ -1,8 +1,7 @@
 import { FlowType, EventType } from "@/types";
 import { OTP } from "../security/otp";
-import { createClient, RedisClientType } from 'redis';
 import { v4 as uuid } from 'uuid';
-import { Redis, RedisConfigNodejs } from '@upstash/redis'
+import { Redis } from '@upstash/redis'
 const redis = Redis.fromEnv()
 
 
@@ -385,7 +384,12 @@ export class RedisSessionService {
 
                     const pipeline = this.redisClient.multi();
                     keys.forEach(key => pipeline.get(key));
-                    const results = await pipeline.exec() as Array<[Error | null, string | null]>;
+                    const results = await pipeline.exec();
+
+                    console.log(results.map((result) => {
+                        const data = Array.from(result);
+                        console.log('cleanup session:result ',result)
+                    }))
 
                     const deletions = results?.map(async ([err, value], index) => {
                         if (!err && value) {

@@ -20,56 +20,85 @@ function withSecurityHeaders(response: NextResponse) {
   return response;
 };
 
+function isPublicRoute(pathname: string): boolean {
+  // Remove leading slash for easier parsing
+  const cleanPath = pathname.startsWith('/') ? pathname.slice(1) : pathname;
 
+  // Split path into segments
+  const segments = cleanPath.split('/').filter(Boolean);
 
-export const publicRoute = ['/login', '/signup', '/'];
+  // Auth routes are public (login, signup)
+  if (segments[0] === 'login' || segments[0] === 'signup') {
+    return true;
+  }
 
+  // Check if it's a country/lang pattern (2-letter country codes, 2-letter language codes)
+  const countryPattern = /^[a-z]{2}$/i;
+  const langPattern = /^[a-z]{2}$/i;
 
+  // Only public if exactly two segments (/<country>/<lang>)
+  if (
+    segments.length === 2 &&
+    countryPattern.test(segments[0]) &&
+    langPattern.test(segments[1])
+  ) {
+    return true;
+  }
+
+  // All other routes are protected
+  return false;
+}
 
 export async function middleware(request: NextRequest) {
-
   const { pathname } = request.nextUrl;
   const url = request.nextUrl.clone();
-  const isPublicRoute = publicRoute.includes(pathname);
+
+  // Get country for redirects
+  const { country } = await geolocation.getGeolocation();
+  const localizedLanding = `/${country.toLowerCase()}/en`;
+
+  // Check if current route is public
+  const isPublic = isPublicRoute(pathname);
 
 
   const authResponse = await AuthSessionMiddleware(request);
   const isAuthenticated = authResponse && authResponse instanceof NextResponse && authResponse.status === 200;
+  
+  console.log(isAuthenticated, isPublic)
 
-  const { country } = await geolocation.getGeolocation();
-
-  const localizedLanding = `/${country.toLowerCase()}/en`;
-  // publicRoute.push(localizedLanding)
-
-
-  if (url.pathname === '/looking') {
+  // Handle special redirects
+  if (pathname === '/looking') {
     return NextResponse.redirect(new URL(`/go/home?visitor_id=sdbfiw92834ye9r&from=navbar`, request.url));
   }
+  
 
-
-  // 3. Authenticated user should NOT access public routes
-  if (isAuthenticated && isPublicRoute) {
-    console.log('authenticated')
+  // Authenticated user trying to access public routes - redirect to rider home
+  if (isAuthenticated && isPublic) {
+    console.log(pathname)
     url.pathname = `${localizedLanding}/rider-home`;
     return withSecurityHeaders(NextResponse.redirect(url));
   }
 
-  // 4. Unauthenticated user trying to access protected routes (not public)
-  if (!isAuthenticated && isPublicRoute) {
-    console.log('unAuthenticated')
+  // Unauthenticated user trying to access protected routes - redirect to localized landing
+  if (!isAuthenticated && !isPublic) {
+
     url.pathname = localizedLanding;
     return withSecurityHeaders(NextResponse.redirect(url));
   }
 
+  if (pathname === '/') {
+    return withSecurityHeaders(NextResponse.redirect(new URL(localizedLanding, request.url)));
+  }
+
+  // If we have an auth response, return it
   if (authResponse) {
     return withSecurityHeaders(authResponse);
   }
 
+  // Continue with the request
   const response = NextResponse.next();
-
   return withSecurityHeaders(response);
 };
-
 
 export const config = {
   matcher: [

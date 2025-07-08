@@ -12,14 +12,12 @@ export async function AuthSessionMiddleware(request: NextRequest) {
     const sessionId = request.cookies.get('x-uber-session')?.value;
     const headersList = request.headers.get('x-visitor-id') || '';
 
-    console.log('headersList', headersList)
     const response = NextResponse.next();
 
 
     if (!sessionId) {
         return null
     }
-
 
     try {
         // Get Session from database
