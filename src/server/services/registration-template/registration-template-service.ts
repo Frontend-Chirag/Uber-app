@@ -1,5 +1,4 @@
 import { db } from "@/lib/db/prisma.js";
-import { TypedDocumentStep } from "./registration-template.js";
 import { RegistrationStep, RegistrationTemplate } from "@prisma/client";
 import { CountryCode } from "@/types/step-hub.js";
 

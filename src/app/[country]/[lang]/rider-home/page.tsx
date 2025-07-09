@@ -1,6 +1,8 @@
 
+import { Header } from '@/components/shared/nav-bar';
+import { isUserLoggedIn } from '@/lib/user-logged-in';
 import { getSessionManager } from '@/server/services/session/session-service'
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import Link from 'next/link'
 import { redirect } from 'next/navigation';
 import React from 'react'
@@ -8,22 +10,16 @@ import React from 'react'
 
 export default async function RiderHome() {
 
-  const userSession = getSessionManager('USER_SESSION');
-  const headerList = await headers()
-  const uberSession = headerList.get('x-uber-session');
+  const isAuthenticated = await isUserLoggedIn()
 
-  if (uberSession === null) redirect('/login')
+  if (!isAuthenticated?.userId) redirect('/login')
 
-  const session = await userSession.getSession(uberSession)
+  const { userId } = isAuthenticated;
 
-  console.log('session', session)
+  console.log('userId', userId)
 
   return (
     <div className='w-screen h-screen'>
-      {/* <Navbar
-        theme='LIGHT'
-
-      /> */}
       <Link href={'/looking'}>rider</Link>
     </div>
   )

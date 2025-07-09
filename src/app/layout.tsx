@@ -26,16 +26,16 @@ export default function RootLayout({
         className={` antialiased`}
       >
         <div className="w-full flex flex-col gap-y-8 relative min-h-screen">
-          <Header />
-          <main role="main" className="flex-grow">
-            <div className="max-w-screen-2xl mx-auto px-4 relative">
-              <QueryProvider>
+          <QueryProvider>
+            <Header />
+            <main role="main" className="flex-grow">
+              <div className="max-w-screen-2xl mx-auto px-4 relative">
                 {children}
                 <Toaster />
-              </QueryProvider>
-            </div>
-          </main>
-          <Footer />
+              </div>
+            </main>
+            <Footer />
+          </QueryProvider>
         </div>
       </body>
     </html>

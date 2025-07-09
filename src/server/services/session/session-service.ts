@@ -34,7 +34,7 @@ export type SessionTypeMap = {
     [SessionKeys.USER_SESSION]: UserSession
 };
 
-interface SessionData<T> {
+export interface SessionData<T> {
     id: string;
     data: T;
     createdAt: Date;
@@ -77,8 +77,6 @@ export interface DeleteSessionOptions {
 export class RedisSessionService {
     private static instance: RedisSessionService;
     private redisClient: Redis;
-    private isConnected: boolean = false;
-    private connectionPromise: Promise<void> | null = null;
 
     // Configuration constants
     private readonly SESSION_TTL_MS = 15 * 60 * 1000; // 15 minutes

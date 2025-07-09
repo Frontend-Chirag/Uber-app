@@ -1,8 +1,24 @@
+"use server";
+
 // lib/user-logged-in.ts
+import { getSessionManager, UserSession } from "@/server/services/session/session-service";
 import { cookies } from "next/headers";
 
-export async function isUserLoggedIn(): Promise<boolean> {
+
+const { getSession } = getSessionManager('USER_SESSION');
+
+
+export async function isUserLoggedIn(): Promise<UserSession | null> {
     const cookieStore = await cookies();
-    const token = cookieStore.get("sessionId");
-    return !!token;
+    const sessionId = cookieStore.get('x-uber-session')?.value;
+
+    if (!sessionId) return null;
+
+    const session = await getSession(sessionId);
+
+    if (!session) return null;
+
+    console.log(session)
+
+    return session.data.userId ? session.data : null;
 }

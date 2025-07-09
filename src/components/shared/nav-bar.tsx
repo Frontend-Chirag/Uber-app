@@ -1,13 +1,18 @@
-"use client";
 
 import React from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { ChevronDown, GlobeIcon } from 'lucide-react';
 import { Profile } from './profile';
+import { isUserLoggedIn } from '@/lib/user-logged-in';
+import { redirect } from 'next/navigation';
 
-export const Header = () => {
-  const isAuthenticated = false;
+
+export async function Header() {
+
+  const isAuthenticated = await isUserLoggedIn().then((data) => data?.userId);
+
+  // if (!isAuthenticated) redirect('/login');
 
   return (
     <header

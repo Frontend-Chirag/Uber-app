@@ -1,4 +1,4 @@
-import { templates } from '@/services/registration-template/registration-template';
+import { templates } from '@/server/services/registration-template/registration-template';
 import { TypedDocumentStep } from '@/types/step-hub';
 import { PrismaClient } from '@prisma/client';
 

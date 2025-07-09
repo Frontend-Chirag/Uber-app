@@ -5,6 +5,8 @@ import { getConnInfo } from 'hono/cloudflare-workers';
 import authApi from '@/server/api/auth-api'
 import loadTsSuggestions from '@/server/api/load-place-suggestions';
 import suggestions from '@/server/api/get-product';
+import userApi from '@/server/api/user-api';
+
 
 
 const app = new Hono().basePath('/api')
@@ -14,9 +16,11 @@ const routes = app
     //     const info = getConnInfo(c) // info is `ConnInfo`
     //     return c.text(`Your remote address is ${info.remote.address}`)
     // })
+    .route('/user', userApi)
     .route('/auth', authApi)
     .route('/suggestions', suggestions)
     .route('/place', loadTsSuggestions)
+
 
 
 export const GET = handle(app)

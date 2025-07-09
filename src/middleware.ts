@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AuthSessionMiddleware } from "./middleware/auth-session-middleware";
 import { geolocation } from "./server/utils/geolocation";
+import { isUserLoggedIn } from "./lib/user-logged-in";
 
 
 const securityHeaders = {
@@ -61,38 +62,31 @@ export async function middleware(request: NextRequest) {
   const isPublic = isPublicRoute(pathname);
 
 
-  const authResponse = await AuthSessionMiddleware(request);
-  const isAuthenticated = authResponse && authResponse instanceof NextResponse && authResponse.status === 200;
-  
-  console.log(isAuthenticated, isPublic)
+  const isAuthenticated = await isUserLoggedIn();
+
+  console.log(isAuthenticated?.userId, isPublic)
 
   // Handle special redirects
   if (pathname === '/looking') {
     return NextResponse.redirect(new URL(`/go/home?visitor_id=sdbfiw92834ye9r&from=navbar`, request.url));
   }
-  
+
 
   // Authenticated user trying to access public routes - redirect to rider home
-  if (isAuthenticated && isPublic) {
+  if (isAuthenticated?.userId && isPublic) {
     console.log(pathname)
     url.pathname = `${localizedLanding}/rider-home`;
     return withSecurityHeaders(NextResponse.redirect(url));
   }
 
   // Unauthenticated user trying to access protected routes - redirect to localized landing
-  if (!isAuthenticated && !isPublic) {
-
+  if (!isAuthenticated?.userId && !isPublic) {
     url.pathname = localizedLanding;
     return withSecurityHeaders(NextResponse.redirect(url));
   }
 
   if (pathname === '/') {
     return withSecurityHeaders(NextResponse.redirect(new URL(localizedLanding, request.url)));
-  }
-
-  // If we have an auth response, return it
-  if (authResponse) {
-    return withSecurityHeaders(authResponse);
   }
 
   // Continue with the request

@@ -1,43 +1,31 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import { db } from "@/lib/db/prisma";
 import { getSessionManager } from "@/server/services/session/session-service";
-// import { getSessionManager } from "@/server/services/session/session-service";
-
-
-
+import { NextRequest, NextResponse } from "next/server";
 
 export async function AuthSessionMiddleware(request: NextRequest) {
-
     const sessionId = request.cookies.get('x-uber-session')?.value;
-    const headersList = request.headers.get('x-visitor-id') || '';
-
-    const response = NextResponse.next();
-
-
     if (!sessionId) {
-        return null
+        console.log('No session cookie');
+        return null;
     }
 
     try {
-        // Get Session from database
         const session = await getSessionManager('USER_SESSION').getSession(sessionId);
+        console.log('Session:', session);
 
         const user = await db.user.findUnique({
-            where: {
-                id: session?.data.userId
-             }
+            where: { id: session?.data.userId }
         });
+        console.log('User:', user);
 
-        if(!user) {
-            return null
+        if (!user) {
+            console.log('No user found for session');
+            return null;
         }
 
-
-        return response;
-
+        return NextResponse.next();
     } catch (error) {
         console.error('Auth Session middleware error:', error);
-        return null
+        return null;
     }
 }

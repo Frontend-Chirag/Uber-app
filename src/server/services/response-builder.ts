@@ -4,7 +4,7 @@ import { ContentfulStatusCode } from "hono/utils/http-status";
 
 // ------------------------------------------------------------Base Response Builder----------------------------------------------------------
 
-type BaseResponse<TData = any> = {
+export type BaseResponse<TData = any> = {
     status: ContentfulStatusCode;
     error?: string;
     success: boolean;
@@ -111,6 +111,7 @@ export type SuggestionData = {
 
 export type SuggestionResponse = BaseResponse<SuggestionData>
 
+
 export class SuggestionResponseBuilder extends BaseResponseBuilder<SuggestionData, BaseResponse> {
     constructor() {
         super()
@@ -130,3 +131,4 @@ export class SuggestionResponseBuilder extends BaseResponseBuilder<SuggestionDat
     }
 
 }
+
