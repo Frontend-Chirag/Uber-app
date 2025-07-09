@@ -17,6 +17,8 @@ export const sendSMSMobile = async ({ phonenumber, phoneCountryCode }: SMSParams
         process.env.TWILIO_AUTH_TOKEN
     );
 
+    console.log(phonenumber, phoneCountryCode)
+
     try {
         // Input validation
         if (!phonenumber || !validatePhone(phonenumber)) {

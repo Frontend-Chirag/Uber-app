@@ -4,15 +4,18 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { ChevronDown, GlobeIcon } from 'lucide-react';
 import { Profile } from './profile';
-import { isUserLoggedIn } from '@/lib/user-logged-in';
-import { redirect } from 'next/navigation';
+import { client } from '@/server/rpc/hono-client';
+
 
 
 export async function Header() {
 
-  const isAuthenticated = await isUserLoggedIn().then((data) => data?.userId);
+  const isAuthenticated = true;
+ 
+  const response = await client.api.user.getCurrentUser.$get();
+  const { data } = await response.json();
+  console.log(data)
 
-  // if (!isAuthenticated) redirect('/login');
 
   return (
     <header
@@ -92,7 +95,7 @@ export async function Header() {
             <>
               <li>
                 <Link
-                  href="/"
+                  href="/login"
                   className={cn(
                     'text-sm font-Rubik-Regular transition duration-500 px-3 py-2',
                     isAuthenticated ? 'text-black' : 'text-white hover:bg-neutral-800 rounded-full'
@@ -103,7 +106,7 @@ export async function Header() {
               </li>
               <li>
                 <Link
-                  href="/"
+                  href="/signup"
                   className="text-sm font-Rubik-Regular transition duration-500 px-3 py-2 text-black bg-white hover:bg-neutral-200 rounded-full"
                 >
                   Sign up

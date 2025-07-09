@@ -5,17 +5,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { Button } from '../ui/button'
 import { ChevronDown, LifeBuoyIcon, SquareChartGantt, UserIcon, WalletCards } from 'lucide-react'
-import { client } from '@/server/rpc/hono-client';
+
+
 
 export async function Profile() {
-
-  const res = await client.api.user.getCurrentUser.$get({});
-  const text = await res.text();
-
-  console.log(text)
-
-  // console.log('data', await response.json())
-
 
   return (
     <DropdownMenu>

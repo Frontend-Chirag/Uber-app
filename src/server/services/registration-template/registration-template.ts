@@ -111,6 +111,7 @@ const indiaDocumentSteps: Record<IndiaStepId, TypedDocumentStep> = {
         "Vehicle Permit",
         "document",
         IndiaStepId.vehiclePermit,
+        
         {
             StepTitle: "Take a photo of your Vehicle Permit",
             StepPreviewTopInstruction: "",
