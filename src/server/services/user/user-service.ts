@@ -28,30 +28,40 @@ export class UserService {
         return user;
     }
 
-    public async getUser(id: string): Promise<BaseResponseBuilder<{ firstname: string, lastname: string }, BaseResponse<{ firstname: string, lastname: string }>>> {
+    public async getUser(
+        id: string
+    ): Promise<BaseResponse<{ firstname: string, lastname: string }>> {
         try {
             const user = await db.user.findUnique({
                 where: { id },
                 select: {
                     firstname: true,
-                    lastname: true
-                }
+                    lastname: true,
+                },
             });
 
-            if (!user) return this.response
+            if (!user)
+                return this.response
+                    .setSuccess(false)
+                    .setData({})
+                    .setStatus(404)
+                    .setError("User not found")
+                    .build();
+
+            return this.response
+                .setSuccess(true)
+                .setData({
+                    firstname: user.firstname,
+                    lastname: user.lastname,
+                })
+                .build();
+        } catch (error) {
+            return this.response
                 .setSuccess(false)
                 .setData({})
-                .setError('User not found')
+                .setStatus(500)
+                .setError("An error occurred")
                 .build();
-
-            return this.response.setData({
-                firstname: user.firstname,
-                lastname: user.lastname
-            }).build()
-
-
-        } catch (error) {
-
         }
     }
 

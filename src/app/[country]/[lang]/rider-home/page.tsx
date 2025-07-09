@@ -10,13 +10,6 @@ import React from 'react'
 
 export default async function RiderHome() {
 
-  const isAuthenticated = await isUserLoggedIn()
-
-  if (!isAuthenticated?.userId) redirect('/login')
-
-  const { userId } = isAuthenticated;
-
-  console.log('userId', userId)
 
   return (
     <div className='w-screen h-screen'>

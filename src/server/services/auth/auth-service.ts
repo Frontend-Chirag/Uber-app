@@ -9,7 +9,7 @@ import { HTTP_ERRORS, HTTP_STATUS, HTTP_SUCCESS } from "@/lib/constants";
 import { getSessionManager } from "../../services/session/session-service";
 import { AuthSchema } from "@/validators/validate-server";
 import { z } from "zod";
-import { AuthResponseBuilder, AuthResponse } from "../response-builder";
+import { BaseResponse, BaseResponseBuilder } from "../response-builder";
 import { ContentfulStatusCode } from "hono/utils/http-status";
 import { geolocation } from "@/server/utils/geolocation";
 
@@ -33,6 +33,33 @@ interface AuthHandler {
     sessionId: string;
 }
 
+interface AuthFields {
+    fieldType: string;
+    hintValue?: string;
+    profileHint?: {
+        firstname: string,
+        lastname: string,
+        phonenumber: string,
+        email: string
+    } | null;
+    otpWidth?: number;
+};
+
+type AuthForm = {
+    flowType: FlowType;
+    screens: {
+        screenType: ScreenType;
+        fields: AuthFields[];
+        eventType: EventType;
+    };
+    inAuthSessionId: string;
+};
+
+type AuthResponse = {
+    form?: AuthForm;
+    redirectUrl?: string;
+};
+
 interface ConditionalResponseData {
     flowType: FlowType;
     email: string;
@@ -52,7 +79,7 @@ interface ConditionalResponseData {
 
 type HandlerFunction = (
     props: AuthHandlersProps
-) => Promise<AuthResponse>;
+) => Promise<BaseResponse<AuthResponse>>;
 
 type EventHandlers = Partial<Record<EventType, HandlerFunction>>;
 type ScreenHandlers = Partial<Record<ScreenType, EventHandlers>>;
@@ -64,7 +91,7 @@ type FieldAnswers = z.infer<typeof AuthSchema>['screenAnswers']['fieldAnswers'][
 export class AuthService {
     private static instance: AuthService;
     private handlers: FlowHandlers;
-    private response: AuthResponseBuilder = new AuthResponseBuilder();
+    private response: BaseResponseBuilder<AuthResponse> = new BaseResponseBuilder<AuthResponse>();
 
     private constructor() {
         this.handlers = {
@@ -122,34 +149,23 @@ export class AuthService {
         return AuthService.instance;
     }
 
-    private async redirectlink(type: 'ROOT' | 'LANDING'): Promise<string> {
-        const { country } = await geolocation.getGeolocation();
-        return type === 'ROOT' ? `/${country}/en` : `/${country}/en/rider-home`;
-    }
-
     // Main flow handler
-    public async handleAuth(props: AuthHandler): Promise<AuthResponse> {
+    public async handleAuth(props: AuthHandler): Promise<BaseResponse<AuthResponse>> {
         try {
             const { flow, screen, event, fieldAnswers, sessionId } = props;
             const headersList = await headers();
             const visitorId = headersList.get('x-visitor-id') || '';
 
-
-            console.log(visitorId)
-
             // Rate limiting check (early)
             const isLimited = await getSessionManager('AUTH_SESSION').checkRateLimit(visitorId);
 
             if (isLimited) {
-                return this.handleError('Too many requests, please try again later', HTTP_STATUS.TOO_MANY_REQUESTS, );
+                return this.handleError('Too many requests, please try again later', HTTP_STATUS.TOO_MANY_REQUESTS,);
             }
 
             let session;
 
-
-            console.log('before a session');
             if (!sessionId) {
-                console.log('after a session');
                 session = await authUserSession.createSession({
                     data: {
                         email: '',
@@ -169,24 +185,14 @@ export class AuthService {
                     visitorId,
                 })
             }
-            
-            console.log(session)
-
 
             const handler = this.handlers[flow]?.[screen]?.[event];
 
             if (!handler) {
-                return this.response
-                    .setError('Something went wrong, try again', )
-                    .setData({ redirectUrl: await this.redirectlink('ROOT') })
-                    .setSuccess(false)
-                    .setStatus(HTTP_STATUS.BAD_REQUEST)
-                    .build();
+                return this.handleError('Something went wrong, try again', HTTP_STATUS.BAD_REQUEST);
             }
 
-            console.log('id', session?.id)
-
-            return await handler({ screen, event, fieldAnswers, sessionId: session ? session.id : sessionId  });
+            return await handler({ screen, event, fieldAnswers, sessionId: session ? session.id : sessionId });
         } catch (error) {
             console.error('Auth error:', error);
             return this.handleError();
@@ -194,13 +200,12 @@ export class AuthService {
     }
 
     // Core Authentication Methods
-    public async login(userId: string, sessionId: string): Promise<AuthResponse> {
+    public async login(userId: string, sessionId: string): Promise<BaseResponse<AuthResponse>> {
         try {
             const headersList = await headers();
             const cookieStore = await cookies();
-            const forwardedFor = headersList.get('x-forwarded-for') || '';
             const visitorId = headersList.get('x-visitor-id') || '';
-            const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown';
+            const { country } = await geolocation.getGeolocation();
 
             // Create a new Redis session for the user (30 days)
             const session = await userSession.createSession({
@@ -221,7 +226,7 @@ export class AuthService {
             authUserSession.deleteSession(sessionId);
 
             return this.response
-                .setData({ redirectUrl: await this.redirectlink('LANDING') })
+                .setData({ redirectUrl: `/${country}/en/rider-home` })
                 .setStatus(HTTP_STATUS.OK)
                 .setMessage(HTTP_SUCCESS.LOGIN)
                 .build();
@@ -232,7 +237,7 @@ export class AuthService {
     }
 
     // Logout
-    public async logout(): Promise<AuthResponse> {
+    public async logout(): Promise<BaseResponse<AuthResponse>> {
         try {
             const cookieStore = await cookies();
             const sessionId = cookieStore.get('x-uber-session');
@@ -241,12 +246,9 @@ export class AuthService {
                 cookieStore.delete('x-uber-session');
             }
             return this.response
-                .setData({
-                    redirectUrl: await this.redirectlink('ROOT')
-                })
+                .setData({})
                 .setStatus(HTTP_STATUS.OK)
                 .setMessage(HTTP_SUCCESS.LOGOUT)
-                .setSuccess(true)
                 .build();
         } catch (error) {
             console.log('Logout Error:', error)
@@ -257,9 +259,8 @@ export class AuthService {
 
     // handle verification handler
     private async handleVerification({ event, fieldAnswers, sessionId }: AuthHandlersProps
-    ): Promise<AuthResponse> {
+    ): Promise<BaseResponse<AuthResponse>> {
         try {
-            const { country } = await geolocation.getGeolocation();
             const isEmail = event === EventType.TypeInputEmail ? true : event === EventType.TypeInputMobile ? false : undefined;
 
             let contact: { email?: string; phonenumber?: string; phoneCountryCode?: string } = {};
@@ -288,9 +289,6 @@ export class AuthService {
                 });
             }
 
-            console.log(sessionId)
-
-
             // Update state
             const session = await authUserSession.updateSession(sessionId, {
                 ...contact,
@@ -301,7 +299,7 @@ export class AuthService {
 
 
             if (!session) {
-                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, await this.redirectlink('ROOT'));
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND);
             }
 
             const { data } = session;
@@ -342,13 +340,13 @@ export class AuthService {
     }
 
     // Add new resend OTP method
-    public async handleResendOTP({ event, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
+    public async handleResendOTP({ event, sessionId }: AuthHandlersProps): Promise<BaseResponse<AuthResponse>> {
         try {
             const session = await authUserSession.getSession(sessionId);
             const isEmail = event === EventType.TypeEmailOTP ? true : event === EventType.TypeSMSOTP ? false : undefined;
 
             if (!session) {
-                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, await this.redirectlink('ROOT'));
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND);
             }
 
             const { data } = session;
@@ -373,6 +371,7 @@ export class AuthService {
             authUserSession.updateSession(sessionId, { otp });
 
             return this.response
+                .setData({})
                 .setStatus(HTTP_STATUS.OK)
                 .setMessage(`OTP has been sent to your ${isEmail ? 'Email address' : 'Phone Number'}`)
                 .build();
@@ -383,14 +382,12 @@ export class AuthService {
     }
 
     // OTP Verification
-    public async handleVerifyEmailOtp({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
+    public async handleVerifyEmailOtp({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<BaseResponse<AuthResponse>> {
         try {
             const session = await authUserSession.getSession(sessionId);
 
-            console.log(session)
-
             if (!session) {
-                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, await this.redirectlink('ROOT'));
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND);
             }
 
             const { data: userState } = session;
@@ -420,11 +417,11 @@ export class AuthService {
     }
 
     // Phone OTP Verification
-    public async handleVerifyPhoneOtp({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
+    public async handleVerifyPhoneOtp({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<BaseResponse<AuthResponse>> {
         try {
             const session = await authUserSession.getSession(sessionId);
             if (!session) {
-                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, await this.redirectlink('ROOT'));
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND);
             }
             const { data: userState } = session;
 
@@ -460,7 +457,7 @@ export class AuthService {
     }
 
     // User Details
-    public async handleInputDetails({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<AuthResponse> {
+    public async handleInputDetails({ fieldAnswers, sessionId }: AuthHandlersProps): Promise<BaseResponse<AuthResponse>> {
         try {
             const details = {
                 firstname: fieldAnswers[0].firstName as string,
@@ -492,15 +489,16 @@ export class AuthService {
         }
     }
 
-    public async handleCreateAccount({ sessionId }: AuthHandlersProps): Promise<AuthResponse> {
+    public async handleCreateAccount({ sessionId }: AuthHandlersProps): Promise<BaseResponse<AuthResponse>> {
         try {
             const authSession = await authUserSession.getSession(sessionId);
-            const headersList = await headers();
             const cookieStore = await cookies();
-            const ip = headersList.get('x-forwarded-for') || '127.0.0.1';
+            const { country } = await geolocation.getGeolocation();
+
+
 
             if (!authSession) {
-                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND, await this.redirectlink('ROOT'));
+                return this.handleError('Session not found or expired', HTTP_STATUS.NOT_FOUND);
             }
 
             const { data: {
@@ -535,14 +533,12 @@ export class AuthService {
 
             })
 
-            console.log('user session', session)
-
             if (session) {
                 cookieStore.set('x-uber-session', session.id);
             }
 
             return this.response
-                .setData({ redirectUrl: await this.redirectlink('LANDING') })
+                .setData({ redirectUrl: `/${country}/en/rider-home` })
                 .setStatus(HTTP_STATUS.ok)
                 .build();
         } catch (error) {
@@ -552,7 +548,7 @@ export class AuthService {
     }
 
     // Condition Based response
-    private handleConditionalResponse(inAuthSessionId: string, data: ConditionalResponseData): AuthResponse {
+    private handleConditionalResponse(inAuthSessionId: string, data: ConditionalResponseData): BaseResponse<AuthResponse> {
         if (data.isVerifiedEmail && data.isVerifiedPhonenumber) {
             return this.response
                 .setData({
@@ -579,18 +575,19 @@ export class AuthService {
 
                         flowType: FlowType.PROGRESSIVE_SIGN_UP,
                         screens: {
-                        screenType: ScreenType.EMAIL_ADDRESS_PROGESSIVE,
-                        fields: [
-                            {
-                                fieldType: findEnumKey(FieldType.EMAIL_ADDRESS)!,
-                                hintValue: data.email!,
-                                otpWidth: data.otp?.value?.length
-                            }
-                        ],
-                        eventType: EventType.TypeInputEmail,
-                    },
-                    inAuthSessionId
-                }})
+                            screenType: ScreenType.EMAIL_ADDRESS_PROGESSIVE,
+                            fields: [
+                                {
+                                    fieldType: findEnumKey(FieldType.EMAIL_ADDRESS)!,
+                                    hintValue: data.email!,
+                                    otpWidth: data.otp?.value?.length
+                                }
+                            ],
+                            eventType: EventType.TypeInputEmail,
+                        },
+                        inAuthSessionId
+                    }
+                })
                 .setStatus(HTTP_STATUS.OK)
                 .build();;
         }
@@ -600,15 +597,16 @@ export class AuthService {
 
                     flowType: FlowType.PROGRESSIVE_SIGN_UP,
                     screens: {
-                    screenType: ScreenType.PHONE_NUMBER_PROGRESSIVE,
-                    fields: [
-                        { fieldType: findEnumKey(FieldType.PHONE_COUNTRY_CODE)!, hintValue: data.phoneCountryCode! },
-                        { fieldType: findEnumKey(FieldType.PHONE_NUMBER)!, hintValue: data.phonenumber!, otpWidth: data.otp?.value?.length },
-                    ],
-                    eventType: EventType.TypeInputMobile,
-                },
-                inAuthSessionId
-            }})
+                        screenType: ScreenType.PHONE_NUMBER_PROGRESSIVE,
+                        fields: [
+                            { fieldType: findEnumKey(FieldType.PHONE_COUNTRY_CODE)!, hintValue: data.phoneCountryCode! },
+                            { fieldType: findEnumKey(FieldType.PHONE_NUMBER)!, hintValue: data.phonenumber!, otpWidth: data.otp?.value?.length },
+                        ],
+                        eventType: EventType.TypeInputMobile,
+                    },
+                    inAuthSessionId
+                }
+            })
             .setStatus(HTTP_STATUS.OK)
             .build();;
     }
@@ -618,24 +616,24 @@ export class AuthService {
         statusCode: ContentfulStatusCode = HTTP_STATUS.INTERNAL_SERVER_ERROR,
         logError?: unknown,
         context: string = 'UnknownContext'
-      ): AuthResponse {
+    ): BaseResponse<AuthResponse> {
         const logMessage =
-          logError instanceof Error
-            ? logError.stack || logError.message
-            : typeof logError === 'string'
-              ? logError
-              : JSON.stringify(logError);
-      
+            logError instanceof Error
+                ? logError.stack || logError.message
+                : typeof logError === 'string'
+                    ? logError
+                    : JSON.stringify(logError);
+
         console.error(`[AUTH ERROR][${context}] ${clientMessage} →`, logMessage);
-      
+
         return this.response
-          .setStatus(statusCode)
-          .setError(clientMessage)
-          .setSuccess(false)
-          .setData({})
-          .build();
-      }
-      
+            .setStatus(statusCode)
+            .setError(clientMessage)
+            .setSuccess(false)
+            .setData({})
+            .build();
+    }
+
 };
 
 

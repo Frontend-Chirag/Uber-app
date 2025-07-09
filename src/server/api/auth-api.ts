@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { FlowType, ScreenType, EventType, FieldType } from '@/types';
 import { FieldValidationSchema } from '@/validators/validate-client';
 import { HTTP_STATUS } from '@/lib/constants';
-import { AuthResponse } from '../services/response-builder';
+import { BaseResponse } from '../services/response-builder';
 
 
 export const AuthSchema = z.object({
@@ -90,7 +90,7 @@ const app = new Hono()
             return ctx.json(response, response.status);
         } catch (error) {
             console.error('Auth error:', error);
-            const errorResponse: AuthResponse = {
+            const errorResponse: BaseResponse = {
                 data: {},
                 success: false,
                 status: error instanceof z.ZodError ? HTTP_STATUS.BAD_REQUEST : HTTP_STATUS.INTERNAL_SERVER_ERROR,
@@ -104,7 +104,7 @@ const app = new Hono()
             const response = await authService.logout();
             return ctx.json(response, response.status);
         } catch (error) {
-            const errorResponse: AuthResponse = {
+            const errorResponse: BaseResponse = {
                 data: {},
                 success: false,
                 status: error instanceof z.ZodError ? HTTP_STATUS.BAD_REQUEST : HTTP_STATUS.INTERNAL_SERVER_ERROR,

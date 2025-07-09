@@ -50,55 +50,6 @@ export class BaseResponseBuilder<TData = any, T extends BaseResponse<TData> = Ba
 }
 
 
-// ------------------------------------------------------------Auth Response Builder----------------------------------------------------------
-
-interface AuthFields {
-    fieldType: string;
-    hintValue?: string;
-    profileHint?: {
-        firstname: string,
-        lastname: string,
-        phonenumber: string,
-        email: string
-    } | null;
-    otpWidth?: number;
-};
-
-
-type AuthForm = {
-    flowType: FlowType;
-    screens: {
-        screenType: ScreenType;
-        fields: AuthFields[];
-        eventType: EventType;
-    };
-    inAuthSessionId: string;
-};
-
-export type AuthResponseData = {
-    form?: AuthForm;
-    redirectUrl?: string;
-};
-
-export type AuthResponse = BaseResponse<AuthResponseData>;
-
-
-export class AuthResponseBuilder extends BaseResponseBuilder<AuthResponseData, AuthResponse> {
-    constructor() {
-        super();
-        this.response.success = true;
-    }
-
-    setData(data: AuthResponseData): this {
-        this.response.data = data;
-        return this;
-      }
-
-    build(): AuthResponse {
-        return super.build();
-    }
-}
-
 export type SuggestionData = {
     suggestions: {
         imageUrl: string,
