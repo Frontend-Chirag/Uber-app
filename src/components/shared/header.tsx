@@ -1,21 +1,29 @@
+'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { ChevronDown, GlobeIcon } from 'lucide-react';
 import { Profile } from './profile';
-import { client } from '@/server/rpc/hono-client';
+import { useUserData } from '@/hooks/use-user';
+
+// Helper to check for session cookie
+function hasSessionCookie() {
+  if (typeof document === 'undefined') return false;
+  return document.cookie.includes('x-uber-session');
+}
 
 
+export function Header() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-export async function Header() {
+  useEffect(() => {
+    setIsAuthenticated(hasSessionCookie());
+  }, []);
 
-  const isAuthenticated = true;
- 
-  const response = await client.api.user.getCurrentUser.$get();
-  const { data } = await response.json();
-  console.log(data)
+  console.log(isAuthenticated)
 
+  const { data: user, isLoading } = useUserData(isAuthenticated);
 
   return (
     <header
@@ -33,6 +41,14 @@ export async function Header() {
               className={cn('text-2xl font-Rubik-Regular mr-4', isAuthenticated ? 'text-black' : 'text-white')}
             >
               Uber
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/blog"
+              className={cn('text-2xl font-Rubik-Regular mr-4', isAuthenticated ? 'text-black' : 'text-white')}
+            >
+              blog
             </Link>
           </li>
 
@@ -91,7 +107,13 @@ export async function Header() {
               Help
             </Link>
           </li>
-          {isAuthenticated ? <Profile /> : (
+          {isAuthenticated ? (
+            isLoading ? (
+              <li><div className="px-3 py-2">Loading...</div></li>
+            ) : (
+              <Profile user={user!} />
+            )
+          ) : (
             <>
               <li>
                 <Link
@@ -118,4 +140,4 @@ export async function Header() {
       </div>
     </header>
   );
-};
+}

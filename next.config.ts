@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+
   images: {
     remotePatterns: [
       {
@@ -38,11 +39,23 @@ const nextConfig: NextConfig = {
           {
             key: 'X-Real-IP',
             value: 'trust',
-          },    
+          },
         ]
       }
     ]
   },
+  async rewrites() {
+    return [
+      {
+        source: '/blog-static/_next/:path*',
+        destination: 'https://3000-firebase-multi-zones-1752136499135.cluster-bg6uurscprhn6qxr6xwtrhvkf6.cloudworkstations.dev/blog-static/_next/:path*',
+      },
+      {
+        source: '/blog',
+        destination: 'https://3000-firebase-multi-zones-1752136499135.cluster-bg6uurscprhn6qxr6xwtrhvkf6.cloudworkstations.dev/blog',
+      }
+    ]
+  }
 };
 
 export default nextConfig;

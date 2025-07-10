@@ -3,6 +3,7 @@ import { handle } from 'hono/vercel'
 import { compress } from 'hono/compress';
 import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';
+import { prettyJSON } from 'hono/pretty-json';
 
 import { getConnInfo } from 'hono/cloudflare-workers';
 
@@ -27,6 +28,7 @@ app.use('*', csrf())
 // Compression middleware
 app.use('*', compress())
 
+app.use(prettyJSON())
 
 const routes = app
     // .get('/', (c) => {

@@ -1,20 +1,28 @@
+"use client";
 
-
-import React from 'react'
+import React, { useEffect } from 'react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '../ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { Button } from '../ui/button'
 import { ChevronDown, LifeBuoyIcon, SquareChartGantt, UserIcon, WalletCards } from 'lucide-react'
+import { client } from '@/server/rpc/hono-client';
 
 
+interface ProfileProps {
+  user: {
+    firstname: string;
+    lastname: string
+  }
+}
 
-export async function Profile() {
+export function Profile({ user: { firstname } }: ProfileProps) {
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
+
         <Button className='flex justify-center items-center text-sm font-Rubik-Regular rounded-full px-3'>
-          chirag
+          {firstname}
           <ChevronDown />
         </Button>
       </DropdownMenuTrigger>
